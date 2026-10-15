@@ -13,7 +13,8 @@ import {
 import { normalizeImageUrl, validateImageFile } from '../../lib/images'
 import { formatBRL, parseBRLToCents } from '../../lib/money'
 import { fetchAdminProduct } from '../../lib/products'
-import { IconFolder, IconLink, IconCheck, IconInfo, IconStar } from '../../components/ui/Icons'
+import { IconFolder, IconLink, IconCheck, IconInfo, IconStar, IconCrop } from '../../components/ui/Icons'
+import { ImageCropModal } from '../../components/admin/ImageCropModal'
 import type { Product } from '../../types/product'
 
 const empty: ProductInput = {
@@ -67,6 +68,18 @@ export function ProductFormPage() {
   const [uploadingProgress, setUploadingProgress] = useState<string | null>(null)
   const [pendingNewImages, setPendingNewImages] = useState<PendingImage[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cropFileInputRef = useRef<HTMLInputElement>(null)
+
+  // Crop / Framing modal state
+  const [cropModalOpen, setCropModalOpen] = useState(false)
+  const [cropImageUrl, setCropImageUrl] = useState('')
+  const [cropFileName, setCropFileName] = useState('foto.jpg')
+  const [cropTarget, setCropTarget] = useState<
+    | { type: 'pending'; id: string }
+    | { type: 'existing'; imgId: string; imgPath: string; isPrimary: boolean; sortOrder: number }
+    | { type: 'newSingle'; isPrimary: boolean }
+    | null
+  >(null)
 
   useEffect(() => {
     if (!id) return
@@ -330,6 +343,138 @@ export function ProductFormPage() {
     )
   }
 
+  // Inicia enquadramento de foto pendente
+  function startCropPending(img: PendingImage) {
+    setCropImageUrl(img.preview)
+    setCropFileName(typeof img.fileOrUrl === 'string' ? 'foto-link.jpg' : img.fileOrUrl.name)
+    setCropTarget({ type: 'pending', id: img.id })
+    setCropModalOpen(true)
+  }
+
+  // Inicia enquadramento de foto já existente na nuvem
+  function startCropExisting(img: { id: string; path: string; public_url: string; is_primary: boolean; sort_order: number }) {
+    setCropImageUrl(img.public_url)
+    setCropFileName(`foto-${img.id}.jpg`)
+    setCropTarget({
+      type: 'existing',
+      imgId: img.id,
+      imgPath: img.path,
+      isPrimary: img.is_primary,
+      sortOrder: img.sort_order,
+    })
+    setCropModalOpen(true)
+  }
+
+  // Seleciona arquivo do computador/celular direto para corte guiado
+  function onSelectFileToCrop(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const invalid = validateImageFile(file)
+    if (invalid) {
+      setError(invalid)
+      return
+    }
+    const currentCount = isNew ? pendingNewImages.length : (product?.images.length ?? 0)
+    if (currentCount >= MAX_IMAGES_PER_PRODUCT) {
+      setError(`No máximo ${MAX_IMAGES_PER_PRODUCT} imagens por produto.`)
+      return
+    }
+    const preview = URL.createObjectURL(file)
+    setCropImageUrl(preview)
+    setCropFileName(file.name)
+    setCropTarget({
+      type: 'newSingle',
+      isPrimary: currentCount === 0,
+    })
+    setCropModalOpen(true)
+    if (cropFileInputRef.current) cropFileInputRef.current.value = ''
+  }
+
+  // Inicia enquadramento a partir de link URL
+  function startCropLink() {
+    if (!imageUrlInput.trim()) return
+    const cleanUrl = normalizeImageUrl(imageUrlInput)
+    const currentCount = isNew ? pendingNewImages.length : (product?.images.length ?? 0)
+    if (currentCount >= MAX_IMAGES_PER_PRODUCT) {
+      setError(`No máximo ${MAX_IMAGES_PER_PRODUCT} imagens por produto.`)
+      return
+    }
+    setCropImageUrl(cleanUrl)
+    setCropFileName('foto-link.jpg')
+    setCropTarget({
+      type: 'newSingle',
+      isPrimary: currentCount === 0,
+    })
+    setCropModalOpen(true)
+  }
+
+  // Callback ao confirmar o enquadramento/corte no modal
+  async function onConfirmCrop(croppedFile: File) {
+    if (!cropTarget) return
+
+    if (cropTarget.type === 'pending') {
+      const newPreview = URL.createObjectURL(croppedFile)
+      setPendingNewImages((prev) =>
+        prev.map((item) =>
+          item.id === cropTarget.id
+            ? { ...item, fileOrUrl: croppedFile, preview: newPreview }
+            : item,
+        ),
+      )
+      setSuccess('Foto enquadrada e atualizada!')
+      return
+    }
+
+    if (cropTarget.type === 'newSingle') {
+      if (isNew) {
+        setPendingNewImages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            fileOrUrl: croppedFile,
+            preview: URL.createObjectURL(croppedFile),
+            is_primary: cropTarget.isPrimary || prev.length === 0,
+          },
+        ])
+        setImageUrlInput('')
+        setUrlPreviewStatus('idle')
+        setSuccess('Foto enquadrada adicionada à lista do produto!')
+      } else if (id) {
+        try {
+          setUploadingProgress('Enviando foto enquadrada ao Supabase…')
+          const currentCount = product?.images.length ?? 0
+          await addProductImage(id, croppedFile, cropTarget.isPrimary, currentCount)
+          setImageUrlInput('')
+          setUrlPreviewStatus('idle')
+          const refreshed = await fetchAdminProduct(id)
+          setProduct(refreshed)
+          setSuccess('Foto enquadrada enviada com sucesso!')
+        } catch (err: any) {
+          setError(err.message || 'Erro ao enviar foto enquadrada.')
+        } finally {
+          setUploadingProgress(null)
+        }
+      }
+      return
+    }
+
+    if (cropTarget.type === 'existing' && id) {
+      try {
+        setUploadingProgress('Atualizando foto no Supabase com novo enquadramento…')
+        await addProductImage(id, croppedFile, cropTarget.isPrimary, cropTarget.sortOrder)
+        await deleteProductImage(cropTarget.imgId, cropTarget.imgPath)
+        const refreshed = await fetchAdminProduct(id)
+        setProduct(refreshed)
+        setSuccess('Foto recortada e atualizada com sucesso no Supabase!')
+      } catch (err: any) {
+        setError(err.message || 'Erro ao substituir foto recortada.')
+      } finally {
+        setUploadingProgress(null)
+      }
+      return
+    }
+  }
+
   if (loading) return <p className="text-sm text-mute">Carregando formulário…</p>
 
   const existingImagesCount = product?.images.length ?? 0
@@ -587,6 +732,14 @@ export function ProductFormPage() {
               className="hidden"
               onChange={(e) => void onUpload(e.target.files)}
             />
+            {/* Input oculto para corte guiado direto de 1 arquivo */}
+            <input
+              ref={cropFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onSelectFileToCrop}
+            />
             <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-white/20 hover:border-gold/60 bg-ink p-6 text-center cursor-pointer transition rounded group"
@@ -600,9 +753,20 @@ export function ProductFormPage() {
                   Selecione fotos do seu computador ou celular. As fotos são otimizadas e salvas diretamente no Supabase.
                 </p>
                 <span className="mt-1 inline-block rounded border border-gold/40 bg-gold/10 px-3 py-1 text-xs text-gold font-medium group-hover:bg-gold group-hover:text-ink transition">
-                  Selecionar arquivos do dispositivo
+                  Selecionar múltiplos arquivos do dispositivo
                 </span>
               </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => cropFileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded border border-gold/50 bg-gold/10 px-4 py-2 text-xs font-semibold text-gold hover:bg-gold hover:text-ink transition shadow-sm"
+              >
+                <IconCrop className="w-4 h-4" />
+                Escolher e Enquadrar Foto (Corte 3:4 Moda ou 1:1)
+              </button>
             </div>
 
             {uploadingProgress && (
@@ -628,14 +792,25 @@ export function ProductFormPage() {
                 placeholder="Exemplo: https://drive.google.com/file/d/... ou https://..."
                 className="min-h-11 flex-1 border border-white/15 bg-ink px-3 text-sm text-paper focus:border-gold focus:outline-none"
               />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!imageUrlInput.trim() || pending}
-                onClick={onAddImageUrl}
-              >
-                {pending ? 'Adicionando…' : '+ Adicionar Foto'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!imageUrlInput.trim() || pending}
+                  onClick={onAddImageUrl}
+                >
+                  {pending ? 'Adicionando…' : '+ Adicionar'}
+                </Button>
+                <button
+                  type="button"
+                  disabled={!imageUrlInput.trim() || pending}
+                  onClick={startCropLink}
+                  className="inline-flex items-center gap-1.5 rounded border border-gold/50 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold hover:bg-gold hover:text-ink transition disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <IconCrop className="w-4 h-4" />
+                  Cortar & Adicionar
+                </button>
+              </div>
             </div>
 
             {/* Painel de Pré-visualização Instantânea do Link */}
@@ -702,10 +877,18 @@ export function ProductFormPage() {
                     )}
                   </div>
                   <div className="mt-2 flex flex-col gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      className="py-1 text-center font-medium text-gold hover:underline inline-flex items-center justify-center gap-1.5"
+                      onClick={() => startCropExisting(img)}
+                    >
+                      <IconCrop className="w-3.5 h-3.5" />
+                      Cortar / Enquadrar
+                    </button>
                     {!img.is_primary && (
                       <button
                         type="button"
-                        className="py-1 text-center font-medium text-gold hover:underline"
+                        className="py-1 text-center font-medium text-paper/80 hover:text-gold hover:underline"
                         onClick={() =>
                           void setPrimaryImage(id!, img.id).then(async () => setProduct(await fetchAdminProduct(id!)))
                         }
@@ -748,10 +931,18 @@ export function ProductFormPage() {
                     )}
                   </div>
                   <div className="mt-2 flex flex-col gap-1.5 text-xs">
+                    <button
+                      type="button"
+                      className="py-1 text-center font-medium text-gold hover:underline inline-flex items-center justify-center gap-1.5"
+                      onClick={() => startCropPending(img)}
+                    >
+                      <IconCrop className="w-3.5 h-3.5" />
+                      Cortar / Enquadrar
+                    </button>
                     {!img.is_primary && (
                       <button
                         type="button"
-                        className="py-1 text-center font-medium text-gold hover:underline"
+                        className="py-1 text-center font-medium text-paper/80 hover:text-gold hover:underline"
                         onClick={() => handleSetPrimaryPending(img.id)}
                       >
                         Definir principal
@@ -778,6 +969,14 @@ export function ProductFormPage() {
       <Button type="submit" disabled={pending}>
         {pending ? 'Salvando…' : 'Salvar Alterações'}
       </Button>
+
+      <ImageCropModal
+        isOpen={cropModalOpen}
+        imageUrl={cropImageUrl}
+        fileName={cropFileName}
+        onClose={() => setCropModalOpen(false)}
+        onConfirm={(cropped) => void onConfirmCrop(cropped)}
+      />
     </form>
   )
 }

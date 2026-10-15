@@ -308,3 +308,85 @@ export function importCatalogJson(jsonString: string): void {
 export function resetToDefaultCatalog(): void {
   saveDevProducts(INITIAL_PRODUCTS)
 }
+
+// ============================================
+// CUPONS DE DESCONTO (ARMAZENAMENTO LOCAL / DEV)
+// ============================================
+import type { Coupon, CouponInput } from '../types/coupon'
+
+const COUPONS_STORAGE_KEY = 'sh_boutique_dev_coupons'
+
+const INITIAL_DEV_COUPONS: Coupon[] = [
+  {
+    id: 'coup-001',
+    code: 'BEMVINDA10',
+    discount_type: 'percent',
+    discount_value: 10,
+    min_order_cents: 0,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'coup-002',
+    code: 'BOUTIQUE50',
+    discount_type: 'fixed',
+    discount_value: 5000,
+    min_order_cents: 30000,
+    is_active: true,
+    created_at: new Date().toISOString(),
+  },
+]
+
+export function getDevCoupons(): Coupon[] {
+  try {
+    const raw = localStorage.getItem(COUPONS_STORAGE_KEY)
+    if (!raw) {
+      saveDevCoupons(INITIAL_DEV_COUPONS)
+      return INITIAL_DEV_COUPONS
+    }
+    const parsed = JSON.parse(raw) as Coupon[]
+    return Array.isArray(parsed) ? parsed : INITIAL_DEV_COUPONS
+  } catch {
+    return INITIAL_DEV_COUPONS
+  }
+}
+
+export function saveDevCoupons(coupons: Coupon[]): void {
+  try {
+    localStorage.setItem(COUPONS_STORAGE_KEY, JSON.stringify(coupons))
+  } catch (err) {
+    console.error('Falha ao salvar cupons locais:', err)
+  }
+}
+
+export function createDevCoupon(input: CouponInput): string {
+  const coupons = getDevCoupons()
+  const cleanCode = input.code.trim().toUpperCase()
+  if (coupons.some((c) => c.code === cleanCode)) {
+    throw new Error(`O cupom "${cleanCode}" já existe.`)
+  }
+  const id = 'coup-' + crypto.randomUUID()
+  const newCoupon: Coupon = {
+    ...input,
+    id,
+    code: cleanCode,
+    created_at: new Date().toISOString(),
+  }
+  coupons.unshift(newCoupon)
+  saveDevCoupons(coupons)
+  return id
+}
+
+export function toggleDevCouponActive(id: string, is_active: boolean): void {
+  const coupons = getDevCoupons()
+  const idx = coupons.findIndex((c) => c.id === id)
+  if (idx !== -1) {
+    coupons[idx].is_active = is_active
+    saveDevCoupons(coupons)
+  }
+}
+
+export function deleteDevCoupon(id: string): void {
+  const coupons = getDevCoupons().filter((c) => c.id !== id)
+  saveDevCoupons(coupons)
+}

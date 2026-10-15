@@ -7,11 +7,13 @@ import { formatBRL } from '../../lib/money'
 import { fetchAdminProducts } from '../../lib/products'
 import { exportCatalogJson } from '../../lib/devStore'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
-import { IconDownload, IconKey } from '../../components/ui/Icons'
+import { IconDownload, IconKey, IconHanger, IconPercent } from '../../components/ui/Icons'
+import { CouponsManager } from '../../components/admin/CouponsManager'
 import type { Product } from '../../types/product'
 
 export function AdminDashboard() {
   const location = useLocation()
+  const [activeTab, setActiveTab] = useState<'produtos' | 'cupons'>('produtos')
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -199,18 +201,50 @@ export function AdminDashboard() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl">Produtos</h1>
-          <p className="mt-2 text-sm text-mute">Cadastre, publique e organize o catálogo da sua loja.</p>
-        </div>
-        <Link
-          to="/admin/produtos/novo"
-          className="inline-flex min-h-11 items-center bg-gold px-5 text-xs uppercase tracking-[0.2em] text-ink font-semibold hover:opacity-90 transition"
+      {/* Abas de Navegação do Painel */}
+      <div className="flex border-b border-white/10 mb-8 gap-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab('produtos')}
+          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition ${
+            activeTab === 'produtos'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-mute hover:text-paper'
+          }`}
         >
-          + Cadastrar produto
-        </Link>
+          <IconHanger className="w-4 h-4" />
+          <span>Produtos ({products.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('cupons')}
+          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition ${
+            activeTab === 'cupons'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-mute hover:text-paper'
+          }`}
+        >
+          <IconPercent className="w-3.5 h-3.5" />
+          <span>Cupons de Desconto</span>
+        </button>
       </div>
+
+      {activeTab === 'cupons' ? (
+        <CouponsManager onNotice={(msg) => setNotice(msg)} />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="font-display text-4xl">Produtos</h1>
+              <p className="mt-2 text-sm text-mute">Cadastre, publique e organize o catálogo da sua loja.</p>
+            </div>
+            <Link
+              to="/admin/produtos/novo"
+              className="inline-flex min-h-11 items-center bg-gold px-5 text-xs uppercase tracking-[0.2em] text-ink font-semibold hover:opacity-90 transition"
+            >
+              + Cadastrar produto
+            </Link>
+          </div>
 
       <div className="mt-8 grid gap-3 md:grid-cols-3">
         <input
@@ -307,6 +341,8 @@ export function AdminDashboard() {
           </Link>
         </div>
       )}
-    </div>
+    </>
+  )}
+</div>
   )
 }
