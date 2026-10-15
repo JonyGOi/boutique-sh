@@ -205,7 +205,13 @@ export function CartPage() {
               item={item}
               line={line}
               product={product}
-              onQty={(qty) => setQuantity(item, qty)}
+              onQty={(qty) => {
+                if (qty <= 0) {
+                  removeItem(item)
+                } else {
+                  setQuantity(item, qty)
+                }
+              }}
               onRemove={() => removeItem(item)}
             />
           )
@@ -380,22 +386,34 @@ function CartRow({
         <div className="mt-3 flex items-center gap-2">
           <button
             type="button"
-            className="min-h-11 min-w-11 border border-white/20"
-            onClick={() => onQty(Math.max(1, item.quantity - 1))}
-            aria-label="Diminuir"
+            className="min-h-11 min-w-11 border border-white/20 text-paper hover:border-gold hover:text-gold transition flex items-center justify-center font-bold cursor-pointer"
+            onClick={() => {
+              if (item.quantity <= 1) {
+                onRemove()
+              } else {
+                onQty(item.quantity - 1)
+              }
+            }}
+            aria-label={item.quantity <= 1 ? 'Remover item do carrinho' : 'Diminuir quantidade'}
+            title={item.quantity <= 1 ? 'Remover item do carrinho' : 'Diminuir quantidade'}
           >
             −
           </button>
-          <span className="min-w-8 text-center">{item.quantity}</span>
+          <span className="min-w-8 text-center text-sm font-semibold text-paper">{item.quantity}</span>
           <button
             type="button"
-            className="min-h-11 min-w-11 border border-white/20"
+            className="min-h-11 min-w-11 border border-white/20 text-paper hover:border-gold hover:text-gold transition flex items-center justify-center font-bold cursor-pointer"
             onClick={() => onQty(item.quantity + 1)}
-            aria-label="Aumentar"
+            aria-label="Aumentar quantidade"
+            title="Aumentar quantidade"
           >
             +
           </button>
-          <button type="button" className="ml-auto text-xs uppercase tracking-[0.16em] text-mute" onClick={onRemove}>
+          <button
+            type="button"
+            className="ml-auto text-xs uppercase tracking-[0.16em] text-mute hover:text-red-400 transition cursor-pointer"
+            onClick={onRemove}
+          >
             Remover
           </button>
         </div>

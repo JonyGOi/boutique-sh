@@ -74,7 +74,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const setQuantity = useCallback(
     (item: CartItem, quantity: number) => {
-      if (!Number.isInteger(quantity) || quantity < 1) return
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        if (quantity <= 0) {
+          persist(readCart().filter((current) => cartKey(current) !== cartKey(item)))
+        }
+        return
+      }
       persist(
         readCart().map((current) =>
           cartKey(current) === cartKey(item) ? { ...current, quantity } : current,
