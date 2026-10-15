@@ -7,6 +7,7 @@ import { formatBRL } from '../../lib/money'
 import { fetchAdminProducts } from '../../lib/products'
 import { exportCatalogJson } from '../../lib/devStore'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
+import { IconDownload, IconKey } from '../../components/ui/Icons'
 import type { Product } from '../../types/product'
 
 export function AdminDashboard() {
@@ -163,17 +164,19 @@ export function AdminDashboard() {
               type="button"
               onClick={handleExport}
               title="Baixar backup dos produtos em formato JSON"
-              className="border border-white/20 bg-ink px-3 py-1.5 text-xs text-paper hover:border-gold transition"
+              className="inline-flex items-center gap-1.5 border border-white/20 bg-ink px-3 py-1.5 text-xs text-paper hover:border-gold transition"
             >
-              📥 Backup JSON
+              <IconDownload className="w-3.5 h-3.5 text-gold" />
+              Backup JSON
             </button>
             <button
               type="button"
               onClick={handleChangePassword}
               title="Trocar a senha de acesso da conta no Supabase"
-              className="border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs text-gold hover:bg-gold hover:text-ink transition font-medium"
+              className="inline-flex items-center gap-1.5 border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs text-gold hover:bg-gold hover:text-ink transition font-medium"
             >
-              🔑 Alterar Senha (Nuvem)
+              <IconKey className="w-3.5 h-3.5" />
+              Alterar Senha
             </button>
           </div>
         </div>

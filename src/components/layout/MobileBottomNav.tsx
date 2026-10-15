@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import { buildWhatsAppSupportUrl } from '../../lib/whatsapp'
+import { IconHome, IconHanger, IconWhatsApp, IconBag } from '../ui/Icons'
 
 export function MobileBottomNav() {
   const { count } = useCart()
@@ -24,8 +25,8 @@ export function MobileBottomNav() {
             isHome ? 'text-gold' : 'text-mute hover:text-paper'
           }`}
         >
-          <span className="text-xl">🏠</span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wider font-medium">Início</span>
+          <IconHome className="w-5 h-5" />
+          <span className="mt-1 text-[10px] uppercase tracking-wider font-medium">Início</span>
         </Link>
 
         {/* Coleção / Roupas */}
@@ -35,8 +36,8 @@ export function MobileBottomNav() {
             isCatalog ? 'text-gold' : 'text-mute hover:text-paper'
           }`}
         >
-          <span className="text-xl">👗</span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wider font-medium">Coleção</span>
+          <IconHanger className="w-5 h-5" />
+          <span className="mt-1 text-[10px] uppercase tracking-wider font-medium">Coleção</span>
         </Link>
 
         {/* WhatsApp Direto */}
@@ -44,17 +45,17 @@ export function MobileBottomNav() {
           href={buildWhatsAppSupportUrl()}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-col items-center justify-center py-1.5 text-green-400 hover:text-green-300 transition active:scale-95"
+          className="flex flex-col items-center justify-center py-1.5 text-gold hover:text-gold-light transition active:scale-95"
           title="Falar no WhatsApp"
         >
-          <span className="relative flex items-center justify-center text-xl">
-            💬
+          <span className="relative flex items-center justify-center">
+            <IconWhatsApp className="w-5 h-5" />
             <span className="absolute -top-0.5 -right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
             </span>
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wider font-semibold">Whats</span>
+          <span className="mt-1 text-[10px] uppercase tracking-wider font-semibold">Whats</span>
         </a>
 
         {/* Carrinho / Sacola */}
@@ -64,15 +65,15 @@ export function MobileBottomNav() {
             isCart ? 'text-gold' : 'text-mute hover:text-paper'
           }`}
         >
-          <span className="relative text-xl">
-            🛍️
+          <span className="relative flex items-center justify-center">
+            <IconBag className="w-5 h-5" />
             {count > 0 && (
               <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[9px] font-bold text-ink">
                 {count}
               </span>
             )}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wider font-medium">Sacola</span>
+          <span className="mt-1 text-[10px] uppercase tracking-wider font-medium">Sacola</span>
         </Link>
       </div>
     </nav>

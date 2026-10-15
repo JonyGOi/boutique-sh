@@ -4,6 +4,7 @@ import { Footer } from './Footer'
 import { Header } from './Header'
 import { MobileBottomNav } from './MobileBottomNav'
 import { isSupabaseConfigured } from '../../lib/supabase'
+import { IconClose } from '../ui/Icons'
 
 export function Layout() {
   const [dismissed, setDismissed] = useState(false)
@@ -22,10 +23,10 @@ export function Layout() {
             type="button"
             onClick={() => setDismissed(true)}
             aria-label="Fechar aviso"
-            className="ml-2 px-2 text-sm font-bold text-ink hover:opacity-70"
+            className="ml-2 px-1 text-ink hover:opacity-70"
             title="Fechar aviso"
           >
-            ✕
+            <IconClose className="w-4 h-4" />
           </button>
         </aside>
       )}

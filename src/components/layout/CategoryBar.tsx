@@ -1,16 +1,27 @@
 import { useRef } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  IconSparkles,
+  IconDress,
+  IconBlouse,
+  IconShirt,
+  IconPants,
+  IconSkirt,
+  IconSuit,
+  IconTag,
+  IconBolt,
+} from '../ui/Icons'
 
 export const STORE_CATEGORIES_WITH_ICONS = [
-  { slug: '', label: 'Todas as Peças', icon: '✨' },
-  { slug: 'vestidos', label: 'Vestidos', icon: '👗' },
-  { slug: 'blusas', label: 'Blusas', icon: '👚' },
-  { slug: 'camisas', label: 'Camisas', icon: '👔' },
-  { slug: 'calcas', label: 'Calças', icon: '👖' },
-  { slug: 'saias', label: 'Saias', icon: '🩱' },
-  { slug: 'conjuntos', label: 'Conjuntos', icon: '🧥' },
-  { slug: 'promocoes', label: 'Promoções', icon: '🏷️' },
-  { slug: 'lancamentos', label: 'Lançamentos', icon: '⚡' },
+  { slug: '', label: 'Todas as Peças', icon: IconSparkles },
+  { slug: 'vestidos', label: 'Vestidos', icon: IconDress },
+  { slug: 'blusas', label: 'Blusas', icon: IconBlouse },
+  { slug: 'camisas', label: 'Camisas', icon: IconShirt },
+  { slug: 'calcas', label: 'Calças', icon: IconPants },
+  { slug: 'saias', label: 'Saias', icon: IconSkirt },
+  { slug: 'conjuntos', label: 'Conjuntos', icon: IconSuit },
+  { slug: 'promocoes', label: 'Promoções', icon: IconTag },
+  { slug: 'lancamentos', label: 'Lançamentos', icon: IconBolt },
 ] as const
 
 interface CategoryBarProps {
@@ -51,11 +62,10 @@ export function CategoryBar({
         >
           {STORE_CATEGORIES_WITH_ICONS.map((cat) => {
             const isActive = activeSlug === cat.slug
+            const Icon = cat.icon
             const content = (
               <>
-                <span className="text-sm leading-none" role="img" aria-hidden="true">
-                  {cat.icon}
-                </span>
+                <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 <span className="whitespace-nowrap text-xs uppercase tracking-[0.16em]">
                   {cat.label}
                 </span>

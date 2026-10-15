@@ -4,6 +4,7 @@ import { ProductCard } from '../components/product/ProductCard'
 import { CategoryBar, STORE_CATEGORIES_WITH_ICONS } from '../components/layout/CategoryBar'
 import { usePublishedProducts } from '../hooks/usePublishedProducts'
 import { effectivePriceCents } from '../lib/money'
+import { IconSearch, IconClose, IconHanger } from '../components/ui/Icons'
 
 type SortKey = 'recentes' | 'preco-asc' | 'preco-desc' | 'nome'
 
@@ -76,8 +77,8 @@ export function Catalog() {
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
           {/* Campo de Busca com ícone e botão de limpar */}
           <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-3 flex items-center text-mute pointer-events-none text-sm">
-              🔍
+            <span className="absolute inset-y-0 left-3 flex items-center text-mute pointer-events-none">
+              <IconSearch className="w-4 h-4 text-mute" />
             </span>
             <input
               type="search"
@@ -90,10 +91,10 @@ export function Catalog() {
               <button
                 type="button"
                 onClick={() => update('q', '')}
-                className="absolute inset-y-0 right-2 flex items-center px-1 text-xs text-mute hover:text-paper"
+                className="absolute inset-y-0 right-2 flex items-center px-1 text-mute hover:text-paper"
                 title="Limpar busca"
               >
-                ✕
+                <IconClose className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -123,10 +124,10 @@ export function Catalog() {
                 <button
                   type="button"
                   onClick={() => update('categoria', '')}
-                  className="hover:opacity-75 font-bold"
+                  className="hover:opacity-75"
                   title="Remover categoria"
                 >
-                  ✕
+                  <IconClose className="w-3 h-3" />
                 </button>
               </span>
             )}
@@ -136,10 +137,10 @@ export function Catalog() {
                 <button
                   type="button"
                   onClick={() => update('q', '')}
-                  className="hover:opacity-75 font-bold"
+                  className="hover:opacity-75"
                   title="Remover busca"
                 >
-                  ✕
+                  <IconClose className="w-3 h-3" />
                 </button>
               </span>
             )}
@@ -169,7 +170,7 @@ export function Catalog() {
 
           {!loading && !error && filtered.length === 0 && (
             <div className="py-16 text-center border border-white/10 bg-ink-2 p-8 rounded">
-              <span className="text-3xl">👗</span>
+              <IconHanger className="mx-auto w-10 h-10 text-gold/70 mb-2" />
               <p className="mt-3 font-display text-2xl text-paper">Nenhuma peça encontrada</p>
               <p className="mt-1 text-xs text-mute max-w-sm mx-auto">
                 Tente selecionar outra categoria de roupa na barra superior ou limpe a busca para ver todos os produtos.

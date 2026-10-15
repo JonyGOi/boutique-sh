@@ -13,6 +13,7 @@ import {
 import { normalizeImageUrl, validateImageFile } from '../../lib/images'
 import { formatBRL, parseBRLToCents } from '../../lib/money'
 import { fetchAdminProduct } from '../../lib/products'
+import { IconFolder, IconLink, IconCheck, IconInfo, IconStar } from '../../components/ui/Icons'
 import type { Product } from '../../types/product'
 
 const empty: ProductInput = {
@@ -459,24 +460,26 @@ export function ProductFormPage() {
             <button
               type="button"
               onClick={() => setImageTab('local')}
-              className={`px-3 py-1 text-xs rounded transition font-medium ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded transition font-medium ${
                 imageTab === 'local'
                   ? 'bg-gold text-ink font-semibold'
                   : 'text-mute hover:text-paper'
               }`}
             >
-              📁 Armazenamento Local
+              <IconFolder className="w-3.5 h-3.5" />
+              Armazenamento Local
             </button>
             <button
               type="button"
               onClick={() => setImageTab('link')}
-              className={`px-3 py-1 text-xs rounded transition font-medium ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded transition font-medium ${
                 imageTab === 'link'
                   ? 'bg-gold text-ink font-semibold'
                   : 'text-mute hover:text-paper'
               }`}
             >
-              🔗 Link / URL da Web
+              <IconLink className="w-3.5 h-3.5" />
+              Link / URL da Web
             </button>
           </div>
         </div>
@@ -497,7 +500,7 @@ export function ProductFormPage() {
               className="border-2 border-dashed border-white/20 hover:border-gold/60 bg-ink p-6 text-center cursor-pointer transition rounded group"
             >
               <div className="flex flex-col items-center justify-center gap-2">
-                <span className="text-3xl text-gold group-hover:scale-110 transition">📁</span>
+                <IconFolder className="w-9 h-9 text-gold group-hover:scale-110 transition" />
                 <p className="text-sm font-semibold text-paper group-hover:text-gold transition">
                   Clique aqui para escolher fotos do armazenamento local
                 </p>
@@ -557,21 +560,24 @@ export function ProductFormPage() {
                 </div>
                 <div className="text-xs space-y-1">
                   {isGoogleDriveLink && (
-                    <p className="text-gold font-medium">
-                      ✓ Link do Google Drive detectado e ajustado para exibição direta!
+                    <p className="flex items-center gap-1.5 text-gold font-medium">
+                      <IconCheck className="w-3.5 h-3.5 shrink-0 text-gold" />
+                      Link do Google Drive detectado e ajustado para exibição direta!
                     </p>
                   )}
                   {urlPreviewStatus === 'loading' && (
                     <p className="text-mute">Verificando imagem no link…</p>
                   )}
                   {urlPreviewStatus === 'success' && (
-                    <p className="text-green-400 font-medium">
-                      ✓ Imagem carregada e pronta para inclusão no produto.
+                    <p className="flex items-center gap-1.5 text-gold font-medium">
+                      <IconCheck className="w-3.5 h-3.5 shrink-0 text-gold" />
+                      Imagem carregada e pronta para inclusão no produto.
                     </p>
                   )}
                   {urlPreviewStatus === 'error' && (
-                    <p className="text-gold/90">
-                      ℹ️ A pré-visualização não carregou (pode exigir permissão pública), mas você pode adicioná-la mesmo assim.
+                    <p className="flex items-start gap-1.5 text-gold/90">
+                      <IconInfo className="w-3.5 h-3.5 shrink-0 text-gold mt-0.5" />
+                      A pré-visualização não carregou (pode exigir permissão pública), mas você pode adicioná-la mesmo assim.
                     </p>
                   )}
                 </div>
@@ -597,8 +603,9 @@ export function ProductFormPage() {
                       }}
                     />
                     {img.is_primary && (
-                      <span className="absolute top-1 left-1 rounded bg-gold px-1.5 py-0.5 text-[10px] font-bold text-ink">
-                        ★ Principal
+                      <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded bg-gold px-1.5 py-0.5 text-[10px] font-bold text-ink">
+                        <IconStar className="w-2.5 h-2.5" />
+                        Principal
                       </span>
                     )}
                   </div>
@@ -642,8 +649,9 @@ export function ProductFormPage() {
                   <div className="relative aspect-square w-full overflow-hidden rounded bg-ink-2">
                     <img src={img.preview} alt="" className="h-full w-full object-cover" />
                     {img.is_primary && (
-                      <span className="absolute top-1 left-1 rounded bg-gold px-1.5 py-0.5 text-[10px] font-bold text-ink">
-                        ★ Principal
+                      <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded bg-gold px-1.5 py-0.5 text-[10px] font-bold text-ink">
+                        <IconStar className="w-2.5 h-2.5" />
+                        Principal
                       </span>
                     )}
                   </div>
