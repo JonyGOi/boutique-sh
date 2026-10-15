@@ -14,8 +14,10 @@ import {
 import { normalizeImageUrl, validateImageFile } from '../../lib/images'
 import { formatBRL, parseBRLToCents } from '../../lib/money'
 import { fetchAdminProduct } from '../../lib/products'
-import { IconFolder, IconLink, IconCheck, IconInfo, IconStar, IconCrop } from '../../components/ui/Icons'
+import { IconFolder, IconLink, IconCheck, IconInfo, IconStar, IconCrop, IconEye } from '../../components/ui/Icons'
 import { ImageCropModal } from '../../components/admin/ImageCropModal'
+import { QuickProductTextImport, type ParsedProductData } from '../../components/admin/QuickProductTextImport'
+import { ProductPageLivePreview, type PreviewImage } from '../../components/admin/ProductPageLivePreview'
 import {
   POPULAR_COLORS,
   formatColorEntry,
@@ -94,6 +96,50 @@ export function ProductFormPage() {
     | { type: 'newSingle'; isPrimary: boolean; color?: string | null }
     | null
   >(null)
+
+  // Layout View mode: 'split' (side-by-side on wide screens) | 'form' | 'preview'
+  const [layoutView, setLayoutView] = useState<'split' | 'form' | 'preview'>('split')
+
+  function handleApplyQuickText(data: ParsedProductData) {
+    setForm((prev) => {
+      const updated = { ...prev }
+      if (data.name) updated.name = data.name
+      if (data.brand) updated.brand = data.brand
+      if (data.category) updated.category = data.category
+      if (data.description) updated.description = data.description
+      if (data.material) updated.material = data.material
+      if (data.gender) updated.gender = data.gender
+      if (data.model_type) updated.model_type = data.model_type
+      if (data.sizes && data.sizes.length > 0) {
+        updated.sizes = Array.from(new Set([...prev.sizes, ...data.sizes]))
+      }
+      if (data.colors && data.colors.length > 0) {
+        const existingNames = prev.colors.map((c) => getColorName(c).toLowerCase())
+        const newUnique = data.colors.filter(
+          (c) => !existingNames.includes(getColorName(c).toLowerCase()),
+        )
+        updated.colors = [...prev.colors, ...newUnique]
+      }
+      if (data.promoPrice) {
+        updated.is_promo = true
+      }
+      if (data.stock != null) {
+        updated.track_stock = true
+        updated.stock = data.stock
+      }
+      return updated
+    })
+
+    if (data.price) {
+      setPrice(data.price)
+    }
+    if (data.promoPrice) {
+      setPromo(data.promoPrice)
+    }
+
+    setSuccess('Campos identificados pelo texto e preenchidos no formulário!')
+    setTimeout(() => setSuccess(null), 6000)
+  }
 
   useEffect(() => {
     if (!id) return
@@ -627,14 +673,135 @@ export function ProductFormPage() {
   const existingImagesCount = product?.images.length ?? 0
   const totalImagesCount = isNew ? pendingNewImages.length : existingImagesCount
 
+  const previewImages: PreviewImage[] = isNew
+    ? pendingNewImages.map((img) => ({
+        id: img.id,
+        url: img.preview,
+        is_primary: img.is_primary,
+        color: img.color,
+      }))
+    : (product?.images ?? []).map((img) => ({
+        id: img.id,
+        url: img.public_url,
+        is_primary: img.is_primary,
+        color: img.color,
+      }))
+
   return (
-    <form onSubmit={onSubmit} className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display text-4xl">{isNew ? 'Novo produto' : 'Editar produto'}</h1>
-        <Button type="button" variant="outline" onClick={() => navigate('/admin')}>
-          ← Voltar ao painel
-        </Button>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      {/* Barra de Topo com Título, Seletor de Modo de Exibição e Voltar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+          <h1 className="font-display text-3xl sm:text-4xl text-paper">
+            {isNew ? 'Novo produto' : 'Editar produto'}
+          </h1>
+          <p className="text-xs text-mute mt-1">
+            Cadastre peças com preenchimento facilitado por texto, fotografias e prévia em tempo real.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Seletor de Visualização */}
+          <div className="flex rounded border border-white/15 bg-ink p-1">
+            <button
+              type="button"
+              onClick={() => setLayoutView('split')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded transition font-medium ${
+                layoutView === 'split'
+                  ? 'bg-gold text-ink font-bold shadow-sm'
+                  : 'text-mute hover:text-paper'
+              }`}
+              title="Exibir formulário e prévia ao mesmo tempo"
+            >
+              <span>◫ Dividir Tela</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutView('form')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded transition font-medium ${
+                layoutView === 'form'
+                  ? 'bg-gold text-ink font-bold shadow-sm'
+                  : 'text-mute hover:text-paper'
+              }`}
+              title="Focar no formulário"
+            >
+              <span>📝 Formulário</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLayoutView('preview')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded transition font-medium ${
+                layoutView === 'preview'
+                  ? 'bg-gold text-ink font-bold shadow-sm'
+                  : 'text-mute hover:text-paper'
+              }`}
+              title="Focar na prévia da loja virtual"
+            >
+              <IconEye className="w-3.5 h-3.5" />
+              <span>Prévia da Loja</span>
+            </button>
+          </div>
+
+          <Button type="button" variant="outline" onClick={() => navigate('/admin')}>
+            ← Voltar ao painel
+          </Button>
+        </div>
       </div>
+
+      {/* Grid Principal: Formulário + Prévia ao Vivo */}
+      <div
+        className={`grid gap-8 items-start ${
+          layoutView === 'split' ? 'xl:grid-cols-12' : 'grid-cols-1'
+        }`}
+      >
+        {/* COLUNA ESQUERDA: Formulário com Cadastro Facilitado */}
+        {(layoutView === 'split' || layoutView === 'form') && (
+          <form
+            onSubmit={onSubmit}
+            className={`space-y-6 ${layoutView === 'split' ? 'xl:col-span-7' : 'max-w-3xl'}`}
+          >
+            {/* Bloco 1: Cadastro Rápido Facilitado por Texto */}
+            <QuickProductTextImport onApply={handleApplyQuickText} disabled={pending} />
+
+            {/* Bloco 2: Atalhos Rápidos para Fotografias e Prévia */}
+            <div className="rounded border border-white/15 bg-ink p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-gold" />
+                <span className="text-xs uppercase tracking-wider text-paper font-semibold">
+                  Fotos ({totalImagesCount} cadastradas)
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs text-gold hover:bg-gold hover:text-ink transition font-medium cursor-pointer"
+                >
+                  <IconFolder className="w-3.5 h-3.5" />
+                  + Fotos do Dispositivo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cropFileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 rounded border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs text-gold hover:bg-gold hover:text-ink transition font-medium cursor-pointer"
+                >
+                  <IconCrop className="w-3.5 h-3.5" />
+                  Recortar (3:4)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('preview-section')
+                    if (el) el.scrollIntoView({ behavior: 'smooth' })
+                    else setLayoutView('preview')
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded border border-white/20 bg-ink-2 px-3 py-1.5 text-xs text-paper hover:border-gold hover:text-gold transition cursor-pointer"
+                >
+                  <IconEye className="w-3.5 h-3.5 text-gold" />
+                  Ver Prévia ↓
+                </button>
+              </div>
+            </div>
 
       <label className="block text-xs uppercase tracking-[0.2em]">
         Nome
@@ -1408,6 +1575,54 @@ export function ProductFormPage() {
         onConfirm={(cropped) => void onConfirmCrop(cropped)}
       />
     </form>
+  )}
+
+        {/* COLUNA DIREITA OU PRÉVIA: Como ficará a página do produto na loja */}
+        {(layoutView === 'split' || layoutView === 'preview') && (
+          <div
+            id="preview-section"
+            className={`space-y-4 ${
+              layoutView === 'split'
+                ? 'xl:col-span-5 xl:sticky xl:top-6 self-start'
+                : 'max-w-4xl mx-auto'
+            }`}
+          >
+            <ProductPageLivePreview
+              name={form.name}
+              description={form.description}
+              price={price}
+              promo={promo}
+              is_promo={form.is_promo}
+              category={form.category}
+              brand={form.brand}
+              material={form.material}
+              gender={form.gender}
+              model_type={form.model_type}
+              sizes={form.sizes}
+              colors={form.colors}
+              images={previewImages}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Botão Flutuante no Celular para Ver a Prévia */}
+      {layoutView === 'split' && (
+        <div className="xl:hidden fixed bottom-6 right-6 z-40">
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById('preview-section')
+              if (el) el.scrollIntoView({ behavior: 'smooth' })
+            }}
+            className="flex items-center gap-2 rounded-full border border-gold bg-ink px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gold shadow-2xl hover:bg-gold hover:text-ink transition cursor-pointer"
+          >
+            <IconEye className="w-4 h-4" />
+            <span>Ver Prévia ao Vivo</span>
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
