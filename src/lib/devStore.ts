@@ -316,26 +316,7 @@ import type { Coupon, CouponInput } from '../types/coupon'
 
 const COUPONS_STORAGE_KEY = 'sh_boutique_dev_coupons'
 
-const INITIAL_DEV_COUPONS: Coupon[] = [
-  {
-    id: 'coup-001',
-    code: 'BEMVINDA10',
-    discount_type: 'percent',
-    discount_value: 10,
-    min_order_cents: 0,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'coup-002',
-    code: 'BOUTIQUE50',
-    discount_type: 'fixed',
-    discount_value: 5000,
-    min_order_cents: 30000,
-    is_active: true,
-    created_at: new Date().toISOString(),
-  },
-]
+const INITIAL_DEV_COUPONS: Coupon[] = []
 
 export function getDevCoupons(): Coupon[] {
   try {
@@ -370,6 +351,7 @@ export function createDevCoupon(input: CouponInput): string {
     ...input,
     id,
     code: cleanCode,
+    used_count: 0,
     created_at: new Date().toISOString(),
   }
   coupons.unshift(newCoupon)
@@ -390,6 +372,17 @@ export function deleteDevCoupon(id: string): void {
   const coupons = getDevCoupons().filter((c) => c.id !== id)
   saveDevCoupons(coupons)
 }
+
+export function incrementDevCouponUsage(code: string): void {
+  const coupons = getDevCoupons()
+  const cleanCode = code.trim().toUpperCase()
+  const target = coupons.find((c) => c.code === cleanCode)
+  if (target) {
+    target.used_count = (target.used_count || 0) + 1
+    saveDevCoupons(coupons)
+  }
+}
+
 
 // ============================================
 // VISITANTES & ANÁLISE DE MÉDIAS (DEV FALLBACK)

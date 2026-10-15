@@ -8,7 +8,12 @@ import { fetchPublishedByIds, primaryImage } from '../lib/products'
 import { buildWhatsAppCheckoutUrl } from '../lib/whatsapp'
 import { getDiscountForTotal } from '../config/store'
 import { IconPercent, IconWhatsApp, IconTag, IconCheck } from '../components/ui/Icons'
-import { calculateCouponDiscount, fetchActiveCoupon, fetchPublicActiveCoupons } from '../lib/coupons'
+import {
+  calculateCouponDiscount,
+  fetchActiveCoupon,
+  fetchPublicActiveCoupons,
+  incrementCouponUsage,
+} from '../lib/coupons'
 import type { Coupon } from '../types/coupon'
 import type { Product, ValidatedLine } from '../types/product'
 
@@ -24,6 +29,18 @@ export function CartPage() {
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponChecking, setCouponChecking] = useState(false)
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
+
+  // Revalida se o cupom salvo na memória ainda está ativo e dentro das regras
+  useEffect(() => {
+    if (appliedCoupon) {
+      fetchActiveCoupon(appliedCoupon.code).then((valid) => {
+        if (!valid) {
+          applyCoupon(null)
+          setCouponError('O cupom aplicado foi desativado ou expirou.')
+        }
+      })
+    }
+  }, [appliedCoupon, applyCoupon])
 
   useEffect(() => {
     fetchPublicActiveCoupons()
@@ -112,6 +129,9 @@ export function CartPage() {
     if (errors.length > 0 || lines.length === 0) {
       setCheckoutError(errors[0] ?? 'Não há produtos válidos para finalizar.')
       return
+    }
+    if (appliedCoupon) {
+      void incrementCouponUsage(appliedCoupon.code)
     }
     const url = buildWhatsAppCheckoutUrl(
       lines,
@@ -226,7 +246,7 @@ export function CartPage() {
                   setCouponCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))
                   if (couponError) setCouponError(null)
                 }}
-                placeholder="Digite seu cupom (Ex: BEMVINDA10)"
+                placeholder="Digite o código do cupom..."
                 className="min-h-11 flex-1 rounded border border-white/15 bg-ink px-3 text-sm text-paper font-mono uppercase tracking-wider focus:border-gold focus:outline-none"
               />
               <button

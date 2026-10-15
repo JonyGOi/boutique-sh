@@ -30,6 +30,18 @@ export function ProductPage() {
   const [couponError, setCouponError] = useState<string | null>(null)
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
 
+  // Revalida se o cupom salvo na memória ainda está ativo e dentro das regras
+  useEffect(() => {
+    if (appliedCoupon) {
+      fetchActiveCoupon(appliedCoupon.code).then((valid) => {
+        if (!valid) {
+          applyCoupon(null)
+          setCouponError('O cupom aplicado foi desativado ou expirou.')
+        }
+      })
+    }
+  }, [appliedCoupon, applyCoupon])
+
   useEffect(() => {
     fetchPublicActiveCoupons()
       .then((coupons) => setAvailableCoupons(coupons))
@@ -361,7 +373,7 @@ export function ProductPage() {
                       setCouponInput(e.target.value.toUpperCase().replace(/\s+/g, ''))
                       if (couponError) setCouponError(null)
                     }}
-                    placeholder="Digite seu cupom (Ex: BEMVINDA10)"
+                    placeholder="Digite o código do cupom..."
                     className="min-h-10 flex-1 rounded border border-white/15 bg-ink px-3 text-xs text-paper font-mono uppercase tracking-wider focus:border-gold focus:outline-none"
                   />
                   <button

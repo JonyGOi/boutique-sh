@@ -3,46 +3,59 @@ import {
   createDevCoupon,
   deleteDevCoupon,
   getDevCoupons,
+  incrementDevCouponUsage,
   toggleDevCouponActive,
 } from './devStore'
 import type { Coupon, CouponInput } from '../types/coupon'
 
 /**
- * Busca um cupom ativo pelo código (usado pelo cliente na sacola/carrinho).
+ * Verifica se o cupom está apto para uso (ativo, dentro da validade e sem estourar limite).
+ */
+export function isValidCoupon(coupon: Coupon): boolean {
+  if (!coupon.is_active) return false
+  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()) return false
+  if (coupon.max_uses != null && (coupon.used_count || 0) >= coupon.max_uses) return false
+  return true
+}
+
+/**
+ * Busca um cupom ativo pelo código. Se estiver inativo, expirado ou esgotado, retorna null.
  */
 export async function fetchActiveCoupon(code: string): Promise<Coupon | null> {
   const cleanCode = code.trim().toUpperCase()
   if (!cleanCode) return null
 
-  if (!isSupabaseConfigured || !supabase) {
-    const devCoupons = getDevCoupons()
-    const found = devCoupons.find((c) => c.code.toUpperCase() === cleanCode && c.is_active)
-    return found ?? null
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('code', cleanCode)
+      .maybeSingle()
+
+    if (data) {
+      const coupon = data as Coupon
+      if (!isValidCoupon(coupon)) {
+        return null
+      }
+      return coupon
+    }
+
+    return null
   }
 
-  const { data, error } = await supabase
-    .from('coupons')
-    .select('*')
-    .eq('code', cleanCode)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (error || !data) {
-    // Fallback local se estiver offline
-    const devCoupons = getDevCoupons()
-    const found = devCoupons.find((c) => c.code.toUpperCase() === cleanCode && c.is_active)
-    return found ?? null
-  }
-
-  return data as Coupon
+  // Fallback local se o Supabase não estiver configurado
+  const devCoupons = getDevCoupons()
+  const found = devCoupons.find((c) => c.code.toUpperCase() === cleanCode)
+  if (found && isValidCoupon(found)) return found
+  return null
 }
 
 /**
- * Busca todos os cupons ativos públicos para sugerir ao cliente (ex: chips de cupons).
+ * Busca todos os cupons ativos e válidos para sugerir ao cliente.
  */
 export async function fetchPublicActiveCoupons(): Promise<Coupon[]> {
   if (!isSupabaseConfigured || !supabase) {
-    return getDevCoupons().filter((c) => c.is_active)
+    return getDevCoupons().filter(isValidCoupon)
   }
 
   const { data, error } = await supabase
@@ -52,14 +65,14 @@ export async function fetchPublicActiveCoupons(): Promise<Coupon[]> {
     .order('created_at', { ascending: false })
 
   if (error || !data) {
-    return getDevCoupons().filter((c) => c.is_active)
+    return getDevCoupons().filter(isValidCoupon)
   }
 
-  return data as Coupon[]
+  return (data as Coupon[]).filter(isValidCoupon)
 }
 
 /**
- * Busca todos os cupons cadastrados (usado no painel administrativo).
+ * Busca todos os cupons cadastrados (usado no painel administrativo com todos os status).
  */
 export async function fetchAdminCoupons(): Promise<Coupon[]> {
   if (!isSupabaseConfigured || !supabase) {
@@ -79,7 +92,7 @@ export async function fetchAdminCoupons(): Promise<Coupon[]> {
 }
 
 /**
- * Cria um novo cupom no banco de dados.
+ * Cria um novo cupom no banco de dados com limite de usos e validade por tempo.
  */
 export async function createCoupon(input: CouponInput): Promise<string> {
   const cleanCode = input.code.trim().toUpperCase()
@@ -97,6 +110,9 @@ export async function createCoupon(input: CouponInput): Promise<string> {
       discount_value: input.discount_value,
       min_order_cents: input.min_order_cents,
       is_active: input.is_active,
+      expires_at: input.expires_at || null,
+      max_uses: input.max_uses != null && input.max_uses > 0 ? input.max_uses : null,
+      used_count: 0,
     })
     .select('id')
     .single()
@@ -152,14 +168,50 @@ export async function deleteCoupon(id: string): Promise<void> {
 }
 
 /**
- * Calcula o desconto do cupom para um determinado subtotal.
+ * Incrementa a contagem de usos do cupom no fechamento da compra.
+ */
+export async function incrementCouponUsage(code: string): Promise<void> {
+  const cleanCode = code.trim().toUpperCase()
+  if (!cleanCode) return
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.rpc('increment_coupon_used', { p_code: cleanCode })
+    } catch (err) {
+      console.warn('Erro ao incrementar uso do cupom no Supabase:', err)
+    }
+  }
+
+  incrementDevCouponUsage(cleanCode)
+}
+
+/**
+ * Calcula o desconto do cupom para um determinado subtotal, validando status, expiração e usos.
  */
 export function calculateCouponDiscount(
   coupon: Coupon,
   subtotalCents: number,
 ): { discountCents: number; error: string | null } {
   if (!coupon.is_active) {
-    return { discountCents: 0, error: 'Este cupom não está mais ativo.' }
+    return { discountCents: 0, error: 'Este cupom foi desativado.' }
+  }
+
+  if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()) {
+    const dataExp = new Date(coupon.expires_at).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    return { discountCents: 0, error: `Este cupom expirou em ${dataExp}.` }
+  }
+
+  if (coupon.max_uses != null && (coupon.used_count || 0) >= coupon.max_uses) {
+    return {
+      discountCents: 0,
+      error: `Este cupom atingiu o limite de ${coupon.max_uses} utilizações e está esgotado.`,
+    }
   }
 
   if (coupon.min_order_cents > 0 && subtotalCents < coupon.min_order_cents) {
