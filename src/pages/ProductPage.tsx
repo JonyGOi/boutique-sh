@@ -5,13 +5,15 @@ import { useCart } from '../context/CartContext'
 import { effectivePriceCents, formatBRL } from '../lib/money'
 import { fetchPublishedProductBySlug, primaryImage } from '../lib/products'
 import type { Product } from '../types/product'
-import { IconCart, IconRuler, IconShield, IconTruck } from '../components/ui/Icons'
+import { IconCart, IconRuler, IconShield, IconTruck, IconTag, IconPercent, IconCheck } from '../components/ui/Icons'
 import { SizeGuideModal } from '../components/product/SizeGuideModal'
+import { calculateCouponDiscount, fetchActiveCoupon, fetchPublicActiveCoupons } from '../lib/coupons'
+import type { Coupon } from '../types/coupon'
 
 export function ProductPage() {
   const { slug = '' } = useParams()
   const navigate = useNavigate()
-  const { addItem } = useCart()
+  const { addItem, appliedCoupon, applyCoupon } = useCart()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,6 +23,18 @@ export function ProductPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [activeImage, setActiveImage] = useState<string | null>(null)
   const [showSizeModal, setShowSizeModal] = useState(false)
+
+  // Cupom de Desconto na página do produto
+  const [couponInput, setCouponInput] = useState('')
+  const [couponChecking, setCouponChecking] = useState(false)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
+
+  useEffect(() => {
+    fetchPublicActiveCoupons()
+      .then((coupons) => setAvailableCoupons(coupons))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -48,10 +62,45 @@ export function ProductPage() {
   if (error) return <p className="px-4 py-16 text-center text-gold">{error}</p>
   if (!product) return <p className="px-4 py-16 text-center text-mute">Produto não encontrado ou não publicado.</p>
 
-  const price = effectivePriceCents(product)
+  const unitPrice = effectivePriceCents(product)
+  const basePriceCents = (unitPrice ?? 0) * qty
+  const couponDiscountCalc = appliedCoupon
+    ? calculateCouponDiscount(appliedCoupon, basePriceCents)
+    : { discountCents: 0, error: null }
+  const singleDiscountCents = couponDiscountCalc.discountCents
+  const finalPriceCents = Math.max(0, basePriceCents - singleDiscountCents)
   const categoryObj = CATEGORIES.find((c) => c.slug === product.category)
   const categoryLabel = categoryObj?.label ?? product.category
   const main = activeImage
+
+  async function handleApplyCoupon(e?: React.FormEvent, customCode?: string) {
+    if (e) e.preventDefault()
+    setCouponError(null)
+    const code = (customCode || couponInput).trim().toUpperCase()
+    if (!code) {
+      setCouponError('Por favor, informe o código do cupom.')
+      return
+    }
+    setCouponChecking(true)
+    try {
+      const found = await fetchActiveCoupon(code)
+      if (!found) {
+        setCouponError('Cupom inválido ou não encontrado.')
+        return
+      }
+      const check = calculateCouponDiscount(found, basePriceCents)
+      if (check.error) {
+        setCouponError(check.error)
+        return
+      }
+      applyCoupon(found)
+      setCouponInput('')
+    } catch {
+      setCouponError('Não foi possível validar o cupom. Tente novamente.')
+    } finally {
+      setCouponChecking(false)
+    }
+  }
 
   function validateSelection(): boolean {
     setMessage(null)
@@ -153,14 +202,24 @@ export function ProductPage() {
             </p>
           )}
 
-          <div className="mt-4 flex items-baseline gap-3">
-            {product.is_promo && product.promo_price_cents != null && (
-              <span className="text-base text-mute line-through">{formatBRL(product.price_cents)}</span>
+          <div className="mt-4 flex flex-wrap items-baseline gap-3">
+            {product.is_promo && product.promo_price_cents != null && !appliedCoupon && (
+              <span className="text-base text-mute line-through">{formatBRL(product.price_cents * qty)}</span>
             )}
-            <span className="text-2xl sm:text-3xl font-display text-gold">{formatBRL(price)}</span>
-            {product.is_promo && (
+            {appliedCoupon && singleDiscountCents > 0 && (
+              <span className="text-base text-mute line-through">{formatBRL(basePriceCents)}</span>
+            )}
+            <span className="text-2xl sm:text-3xl font-display text-gold">
+              {formatBRL(appliedCoupon && singleDiscountCents > 0 ? finalPriceCents : basePriceCents)}
+            </span>
+            {product.is_promo && (!appliedCoupon || singleDiscountCents === 0) && (
               <span className="rounded bg-red-950/80 border border-red-500/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-red-200 font-bold">
                 Promoção
+              </span>
+            )}
+            {appliedCoupon && singleDiscountCents > 0 && (
+              <span className="rounded bg-gold/15 border border-gold/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-gold font-bold">
+                Cupom {appliedCoupon.code} aplicado
               </span>
             )}
           </div>
@@ -277,6 +336,102 @@ export function ProductPage() {
             </div>
           </div>
 
+          {/* CAMPO DE CUPOM DE DESCONTO NA HORA DA COMPRA */}
+          <div className="mt-7 rounded border border-gold/40 bg-ink-2 p-3.5 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="flex items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-gold font-semibold">
+                <IconTag className="w-4 h-4 text-gold" />
+                Cupom de Desconto
+              </span>
+              {appliedCoupon && (
+                <span className="text-[10px] uppercase tracking-wider text-green-400 font-bold flex items-center gap-1">
+                  <IconCheck className="w-3.5 h-3.5 text-green-400" />
+                  Ativo na Compra
+                </span>
+              )}
+            </div>
+
+            {!appliedCoupon ? (
+              <div className="space-y-2.5">
+                <form onSubmit={(e) => void handleApplyCoupon(e)} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => {
+                      setCouponInput(e.target.value.toUpperCase().replace(/\s+/g, ''))
+                      if (couponError) setCouponError(null)
+                    }}
+                    placeholder="Digite seu cupom (Ex: BEMVINDA10)"
+                    className="min-h-10 flex-1 rounded border border-white/15 bg-ink px-3 text-xs text-paper font-mono uppercase tracking-wider focus:border-gold focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={couponChecking || !couponInput.trim()}
+                    className="inline-flex min-h-10 items-center justify-center rounded bg-gold px-4 text-xs uppercase tracking-wider text-ink font-semibold hover:bg-gold-light transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {couponChecking ? 'Validando…' : 'Aplicar'}
+                  </button>
+                </form>
+
+                {/* Sugestões de cupons ativos da loja */}
+                {availableCoupons.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-1.5 border-t border-white/5">
+                    <span className="text-mute">Cupons disponíveis:</span>
+                    {availableCoupons.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => void handleApplyCoupon(undefined, c.code)}
+                        className="rounded border border-gold/40 bg-gold/10 px-2 py-0.5 text-gold font-mono hover:bg-gold hover:text-ink transition cursor-pointer"
+                        title={
+                          c.discount_type === 'percent'
+                            ? `${c.discount_value}% OFF`
+                            : `${formatBRL(c.discount_value)} OFF`
+                        }
+                      >
+                        {c.code} ({c.discount_type === 'percent' ? `${c.discount_value}%` : formatBRL(c.discount_value)})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded border border-gold/40 bg-gold/10 p-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold text-ink">
+                    <IconPercent className="w-3.5 h-3.5" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold text-paper font-mono tracking-wider">
+                      {appliedCoupon.code}{' '}
+                      <span className="text-gold font-sans font-normal">
+                        (
+                        {appliedCoupon.discount_type === 'percent'
+                          ? `${appliedCoupon.discount_value}% OFF`
+                          : `${formatBRL(appliedCoupon.discount_value)} OFF`}
+                        )
+                      </span>
+                    </p>
+                    {singleDiscountCents > 0 && (
+                      <p className="text-[11px] text-gold font-medium">
+                        Desconto de {formatBRL(singleDiscountCents)} aplicado nesta compra!
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => applyCoupon(null)}
+                  className="text-xs text-mute hover:text-red-400 underline font-medium cursor-pointer"
+                >
+                  Remover
+                </button>
+              </div>
+            )}
+
+            {couponError && <p className="mt-2 text-xs text-red-400">{couponError}</p>}
+          </div>
+
           {/* BOTÃO ESTILO SHOPEE: Carrinho [🛒] ao lado + COMPRAR AGORA principal */}
           <div className="mt-8 flex items-center gap-3">
             <button
@@ -294,9 +449,14 @@ export function ProductPage() {
               type="button"
               onClick={buyNow}
               disabled={!product.available}
-              className="flex-1 min-h-12 rounded bg-gold px-6 text-xs sm:text-sm uppercase tracking-[0.22em] font-bold text-ink hover:bg-gold-light transition shadow-lg shadow-gold/20 active:scale-95 disabled:opacity-50"
+              className="flex-1 min-h-12 rounded bg-gold px-6 text-xs sm:text-sm uppercase tracking-[0.22em] font-bold text-ink hover:bg-gold-light transition shadow-lg shadow-gold/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {product.available ? 'Comprar Agora' : 'Indisponível'}
+              <span>{product.available ? 'Comprar Agora' : 'Indisponível'}</span>
+              {appliedCoupon && singleDiscountCents > 0 && (
+                <span className="text-xs bg-ink text-gold px-2 py-0.5 rounded font-mono font-bold">
+                  {formatBRL(finalPriceCents)}
+                </span>
+              )}
             </button>
           </div>
 
@@ -337,9 +497,14 @@ export function ProductPage() {
           type="button"
           onClick={buyNow}
           disabled={!product.available}
-          className="flex-1 min-h-11 rounded bg-gold px-4 text-xs uppercase tracking-[0.2em] font-bold text-ink hover:bg-gold-light transition shadow-md shadow-gold/20 active:scale-95 disabled:opacity-50"
+          className="flex-1 min-h-11 rounded bg-gold px-4 text-xs uppercase tracking-[0.2em] font-bold text-ink hover:bg-gold-light transition shadow-md shadow-gold/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {product.available ? 'Comprar Agora' : 'Indisponível'}
+          <span>{product.available ? 'Comprar Agora' : 'Indisponível'}</span>
+          {appliedCoupon && singleDiscountCents > 0 && (
+            <span className="text-[10px] bg-ink text-gold px-1.5 py-0.5 rounded font-mono font-bold">
+              {formatBRL(finalPriceCents)}
+            </span>
+          )}
         </button>
       </div>
 

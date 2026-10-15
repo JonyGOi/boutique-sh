@@ -38,6 +38,27 @@ export async function fetchActiveCoupon(code: string): Promise<Coupon | null> {
 }
 
 /**
+ * Busca todos os cupons ativos públicos para sugerir ao cliente (ex: chips de cupons).
+ */
+export async function fetchPublicActiveCoupons(): Promise<Coupon[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    return getDevCoupons().filter((c) => c.is_active)
+  }
+
+  const { data, error } = await supabase
+    .from('coupons')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+
+  if (error || !data) {
+    return getDevCoupons().filter((c) => c.is_active)
+  }
+
+  return data as Coupon[]
+}
+
+/**
  * Busca todos os cupons cadastrados (usado no painel administrativo).
  */
 export async function fetchAdminCoupons(): Promise<Coupon[]> {

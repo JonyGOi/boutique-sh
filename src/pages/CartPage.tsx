@@ -7,13 +7,13 @@ import { formatBRL } from '../lib/money'
 import { fetchPublishedByIds, primaryImage } from '../lib/products'
 import { buildWhatsAppCheckoutUrl } from '../lib/whatsapp'
 import { getDiscountForTotal } from '../config/store'
-import { IconPercent, IconWhatsApp } from '../components/ui/Icons'
-import { calculateCouponDiscount, fetchActiveCoupon } from '../lib/coupons'
+import { IconPercent, IconWhatsApp, IconTag, IconCheck } from '../components/ui/Icons'
+import { calculateCouponDiscount, fetchActiveCoupon, fetchPublicActiveCoupons } from '../lib/coupons'
 import type { Coupon } from '../types/coupon'
 import type { Product, ValidatedLine } from '../types/product'
 
 export function CartPage() {
-  const { items, setQuantity, removeItem } = useCart()
+  const { items, setQuantity, removeItem, appliedCoupon, applyCoupon } = useCart()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,9 +21,15 @@ export function CartPage() {
 
   // Cupom de Desconto
   const [couponCodeInput, setCouponCodeInput] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponChecking, setCouponChecking] = useState(false)
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
+
+  useEffect(() => {
+    fetchPublicActiveCoupons()
+      .then((coupons) => setAvailableCoupons(coupons))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -63,10 +69,10 @@ export function CartPage() {
   const totalDiscountCents = tierDiscountCents + couponDiscountCents
   const finalCents = Math.max(0, subtotal - totalDiscountCents)
 
-  async function handleApplyCoupon(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleApplyCoupon(e?: React.FormEvent, customCode?: string) {
+    if (e) e.preventDefault()
     setCouponError(null)
-    const code = couponCodeInput.trim().toUpperCase()
+    const code = (customCode || couponCodeInput).trim().toUpperCase()
     if (!code) {
       setCouponError('Por favor, informe o código do cupom.')
       return
@@ -83,7 +89,7 @@ export function CartPage() {
         setCouponError(check.error)
         return
       }
-      setAppliedCoupon(found)
+      applyCoupon(found)
       setCouponCodeInput('')
     } catch {
       setCouponError('Não foi possível validar o cupom. Tente novamente.')
@@ -93,7 +99,7 @@ export function CartPage() {
   }
 
   function handleRemoveCoupon() {
-    setAppliedCoupon(null)
+    applyCoupon(null)
     setCouponError(null)
   }
 
@@ -196,31 +202,64 @@ export function CartPage() {
       </ul>
 
       {/* Bloco de Cupom de Desconto */}
-      <div className="mt-8 rounded border border-white/10 bg-ink-2 p-4">
-        <p className="text-xs uppercase tracking-[0.2em] text-gold font-semibold mb-2">
-          Cupom de Desconto
-        </p>
+      <div className="mt-8 rounded border border-gold/40 bg-ink-2 p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-gold font-semibold flex items-center gap-1.5">
+            <IconTag className="w-4 h-4 text-gold" />
+            Cupom de Desconto
+          </p>
+          {appliedCoupon && (
+            <span className="text-[10px] uppercase tracking-wider text-green-400 font-bold flex items-center gap-1">
+              <IconCheck className="w-3.5 h-3.5 text-green-400" />
+              Cupom Ativo
+            </span>
+          )}
+        </div>
 
         {!appliedCoupon ? (
-          <form onSubmit={handleApplyCoupon} className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              value={couponCodeInput}
-              onChange={(e) => {
-                setCouponCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))
-                if (couponError) setCouponError(null)
-              }}
-              placeholder="Digite seu cupom (Ex: BEMVINDA10)"
-              className="min-h-11 flex-1 rounded border border-white/15 bg-ink px-3 text-sm text-paper font-mono uppercase tracking-wider focus:border-gold focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={couponChecking || !couponCodeInput.trim()}
-              className="inline-flex min-h-11 items-center justify-center rounded bg-gold px-6 text-xs uppercase tracking-[0.18em] text-ink font-semibold hover:bg-gold-light transition disabled:opacity-50 cursor-pointer"
-            >
-              {couponChecking ? 'Validando…' : 'Aplicar'}
-            </button>
-          </form>
+          <div className="space-y-2.5">
+            <form onSubmit={(e) => void handleApplyCoupon(e)} className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={couponCodeInput}
+                onChange={(e) => {
+                  setCouponCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))
+                  if (couponError) setCouponError(null)
+                }}
+                placeholder="Digite seu cupom (Ex: BEMVINDA10)"
+                className="min-h-11 flex-1 rounded border border-white/15 bg-ink px-3 text-sm text-paper font-mono uppercase tracking-wider focus:border-gold focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={couponChecking || !couponCodeInput.trim()}
+                className="inline-flex min-h-11 items-center justify-center rounded bg-gold px-6 text-xs uppercase tracking-[0.18em] text-ink font-semibold hover:bg-gold-light transition disabled:opacity-50 cursor-pointer"
+              >
+                {couponChecking ? 'Validando…' : 'Aplicar'}
+              </button>
+            </form>
+
+            {/* Sugestões de cupons ativos da loja */}
+            {availableCoupons.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-1.5 border-t border-white/5">
+                <span className="text-mute">Cupons disponíveis:</span>
+                {availableCoupons.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => void handleApplyCoupon(undefined, c.code)}
+                    className="rounded border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold font-mono hover:bg-gold hover:text-ink transition cursor-pointer"
+                    title={
+                      c.discount_type === 'percent'
+                        ? `${c.discount_value}% OFF`
+                        : `${formatBRL(c.discount_value)} OFF`
+                    }
+                  >
+                    {c.code} ({c.discount_type === 'percent' ? `${c.discount_value}%` : formatBRL(c.discount_value)})
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex items-center justify-between rounded border border-gold/40 bg-gold/10 p-3">
             <div className="flex items-center gap-2">
@@ -244,7 +283,7 @@ export function CartPage() {
             <button
               type="button"
               onClick={handleRemoveCoupon}
-              className="text-xs text-mute hover:text-red-400 underline font-medium"
+              className="text-xs text-mute hover:text-red-400 underline font-medium cursor-pointer"
             >
               Remover
             </button>
