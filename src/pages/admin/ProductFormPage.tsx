@@ -1228,7 +1228,7 @@ export function ProductFormPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {product.images.map((img) => (
                 <figure key={img.id} className="relative border border-white/15 bg-ink p-2 rounded flex flex-col justify-between">
-                  <div className="relative aspect-square w-full overflow-hidden rounded bg-ink-2">
+                  <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-ink-2">
                     <img
                       src={img.public_url}
                       alt=""
@@ -1320,7 +1320,7 @@ export function ProductFormPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {pendingNewImages.map((img) => (
                 <figure key={img.id} className="relative border border-white/15 bg-ink p-2 rounded flex flex-col justify-between">
-                  <div className="relative aspect-square w-full overflow-hidden rounded bg-ink-2">
+                  <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-ink-2">
                     <img src={img.preview} alt="" className="h-full w-full object-cover" />
                     {img.is_primary && (
                       <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded bg-gold px-1.5 py-0.5 text-[10px] font-bold text-ink">
