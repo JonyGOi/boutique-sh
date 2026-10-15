@@ -11,10 +11,8 @@ import { IconPercent, IconWhatsApp, IconTag, IconCheck } from '../components/ui/
 import {
   calculateCouponDiscount,
   fetchActiveCoupon,
-  fetchPublicActiveCoupons,
   incrementCouponUsage,
 } from '../lib/coupons'
-import type { Coupon } from '../types/coupon'
 import type { Product, ValidatedLine } from '../types/product'
 
 export function CartPage() {
@@ -28,7 +26,6 @@ export function CartPage() {
   const [couponCodeInput, setCouponCodeInput] = useState('')
   const [couponError, setCouponError] = useState<string | null>(null)
   const [couponChecking, setCouponChecking] = useState(false)
-  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
 
   // Revalida se o cupom salvo na memória ainda está ativo e dentro das regras
   useEffect(() => {
@@ -41,12 +38,6 @@ export function CartPage() {
       })
     }
   }, [appliedCoupon, applyCoupon])
-
-  useEffect(() => {
-    fetchPublicActiveCoupons()
-      .then((coupons) => setAvailableCoupons(coupons))
-      .catch(() => {})
-  }, [])
 
   useEffect(() => {
     let active = true
@@ -86,10 +77,10 @@ export function CartPage() {
   const totalDiscountCents = tierDiscountCents + couponDiscountCents
   const finalCents = Math.max(0, subtotal - totalDiscountCents)
 
-  async function handleApplyCoupon(e?: React.FormEvent, customCode?: string) {
+  async function handleApplyCoupon(e?: React.FormEvent) {
     if (e) e.preventDefault()
     setCouponError(null)
-    const code = (customCode || couponCodeInput).trim().toUpperCase()
+    const code = couponCodeInput.trim().toUpperCase()
     if (!code) {
       setCouponError('Por favor, informe o código do cupom.')
       return
@@ -257,28 +248,6 @@ export function CartPage() {
                 {couponChecking ? 'Validando…' : 'Aplicar'}
               </button>
             </form>
-
-            {/* Sugestões de cupons ativos da loja */}
-            {availableCoupons.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] pt-1.5 border-t border-white/5">
-                <span className="text-mute">Cupons disponíveis:</span>
-                {availableCoupons.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => void handleApplyCoupon(undefined, c.code)}
-                    className="rounded border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold font-mono hover:bg-gold hover:text-ink transition cursor-pointer"
-                    title={
-                      c.discount_type === 'percent'
-                        ? `${c.discount_value}% OFF`
-                        : `${formatBRL(c.discount_value)} OFF`
-                    }
-                  >
-                    {c.code} ({c.discount_type === 'percent' ? `${c.discount_value}%` : formatBRL(c.discount_value)})
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         ) : (
           <div className="flex items-center justify-between rounded border border-gold/40 bg-gold/10 p-3">
