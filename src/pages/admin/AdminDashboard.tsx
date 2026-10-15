@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { PRODUCT_CATEGORIES } from '../../config/store'
 import { deleteProduct, updateProduct } from '../../lib/adminApi'
@@ -11,6 +11,7 @@ import { IconDownload, IconKey } from '../../components/ui/Icons'
 import type { Product } from '../../types/product'
 
 export function AdminDashboard() {
+  const location = useLocation()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -18,6 +19,16 @@ export function AdminDashboard() {
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('todos')
   const [category, setCategory] = useState('')
+
+  useEffect(() => {
+    const state = location.state as { notice?: string } | null
+    if (state?.notice) {
+      setNotice(state.notice)
+      window.history.replaceState({}, document.title)
+      const timer = setTimeout(() => setNotice(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [location.state])
 
   async function load() {
     setLoading(true)

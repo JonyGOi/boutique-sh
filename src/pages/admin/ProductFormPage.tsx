@@ -169,11 +169,10 @@ export function ProductFormPage() {
             await addProductImage(createdId, item.fileOrUrl, item.is_primary, i)
           }
         }
-        setSuccess('Produto cadastrado com sucesso!')
-        navigate(`/admin/produtos/${createdId}`, { replace: true })
+        navigate('/admin', { state: { notice: 'Produto cadastrado com sucesso!' } })
       } else if (id) {
         await updateProduct(id, input)
-        setSuccess('Alterações salvas com sucesso!')
+        navigate('/admin', { state: { notice: 'Alterações salvas com sucesso!' } })
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Não foi possível salvar. Verifique os dados e tente novamente.'
