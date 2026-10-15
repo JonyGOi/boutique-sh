@@ -46,16 +46,10 @@ export function MobileBottomNav() {
           target="_blank"
           rel="noopener noreferrer"
           className="flex flex-col items-center justify-center py-1.5 text-gold hover:text-gold-light transition active:scale-95"
-          title="Falar no WhatsApp"
+          title="Atendimento no WhatsApp"
         >
-          <span className="relative flex items-center justify-center">
-            <IconWhatsApp className="w-5 h-5" />
-            <span className="absolute -top-0.5 -right-1 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
-            </span>
-          </span>
-          <span className="mt-1 text-[10px] uppercase tracking-wider font-semibold">Whats</span>
+          <IconWhatsApp className="w-5 h-5 shrink-0" />
+          <span className="mt-1 text-[10px] uppercase tracking-wider font-medium">WhatsApp</span>
         </a>
 
         {/* Carrinho / Sacola */}

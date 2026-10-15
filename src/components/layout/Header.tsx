@@ -135,7 +135,7 @@ export function Header() {
             className="hidden lg:inline-flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-mute hover:text-gold mr-1 transition"
             title="Atendimento no WhatsApp"
           >
-            <IconWhatsApp className="w-3.5 h-3.5 text-gold" />
+            <IconWhatsApp className="w-4 h-4 shrink-0 text-gold" />
             <span>Atendimento</span>
           </a>
 

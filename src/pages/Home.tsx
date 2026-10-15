@@ -38,7 +38,7 @@ export function Home() {
               rel="noopener noreferrer"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded border border-gold/50 bg-ink/70 px-5 text-xs uppercase tracking-[0.18em] text-gold hover:bg-gold hover:text-ink transition"
             >
-              <IconWhatsApp className="w-4 h-4" />
+              <IconWhatsApp className="w-4 h-4 shrink-0" />
               WhatsApp
             </a>
           </div>
@@ -97,7 +97,7 @@ export function Home() {
       <section className="mx-auto max-w-6xl px-4 pb-16 md:pb-24">
         <div className="rounded border border-gold/30 bg-ink-2 px-6 py-10 text-center sm:px-12 md:px-16 shadow-xl">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-gold/40 bg-gold/10 text-gold mb-3">
-            <IconWhatsApp className="w-7 h-7" />
+            <IconWhatsApp className="w-7 h-7 shrink-0" />
           </div>
           <p className="mt-2 text-xs uppercase tracking-[0.32em] text-gold">Atendimento Imediato</p>
           <h2 className="mt-3 font-display text-3xl sm:text-4xl text-paper">Dúvidas ou Pedidos pelo WhatsApp</h2>
@@ -110,7 +110,7 @@ export function Home() {
             rel="noopener noreferrer"
             className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded bg-gold px-7 text-xs uppercase tracking-[0.22em] text-ink font-semibold hover:bg-gold-light transition shadow-lg shadow-gold/20"
           >
-            <IconWhatsApp className="w-4 h-4" />
+            <IconWhatsApp className="w-4 h-4 shrink-0" />
             Falar no WhatsApp
           </a>
         </div>

@@ -170,7 +170,7 @@ export function CartPage() {
             onClick={checkout}
             className="flex-1 inline-flex min-h-12 items-center justify-center gap-2 rounded bg-gold px-6 text-xs uppercase tracking-[0.2em] text-ink font-bold hover:bg-gold-light transition shadow-lg shadow-gold/20 active:scale-95 cursor-pointer"
           >
-            <IconWhatsApp className="w-4 h-4" />
+            <IconWhatsApp className="w-4 h-4 shrink-0" />
             Finalizar Pedido via WhatsApp
           </button>
           <ButtonLink to="/colecao" variant="outline">

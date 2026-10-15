@@ -77,7 +77,7 @@ export function Footer() {
             rel="noopener noreferrer"
             target="_blank"
           >
-            <IconWhatsApp className="w-4 h-4" />
+            <IconWhatsApp className="w-4 h-4 shrink-0" />
             Falar no WhatsApp
           </a>
         </div>
