@@ -175,8 +175,9 @@ export function ProductFormPage() {
         await updateProduct(id, input)
         setSuccess('Alterações salvas com sucesso!')
       }
-    } catch {
-      setError('Não foi possível salvar. Verifique os dados e tente novamente.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Não foi possível salvar. Verifique os dados e tente novamente.'
+      setError(msg)
     } finally {
       setPending(false)
       setUploadingProgress(null)

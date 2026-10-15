@@ -23,8 +23,8 @@ export async function createProduct(input: ProductInput): Promise<string> {
     .select('id')
     .single()
   if (error || !data) {
-    console.warn('Erro ao salvar no Supabase, salvando localmente:', error)
-    return createDevProduct(input)
+    console.error('Erro ao salvar no Supabase:', error)
+    throw new Error(error?.message || 'Erro ao salvar produto no Supabase.')
   }
   return data.id as string
 }
@@ -36,8 +36,8 @@ export async function updateProduct(id: string, input: ProductInput): Promise<vo
   }
   const { error } = await supabase.from('products').update(input).eq('id', id)
   if (error) {
-    console.warn('Erro ao atualizar no Supabase, atualizando localmente:', error)
-    updateDevProduct(id, input)
+    console.error('Erro ao atualizar no Supabase:', error)
+    throw new Error(error?.message || 'Erro ao atualizar produto no Supabase.')
   }
 }
 
