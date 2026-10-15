@@ -8,6 +8,7 @@ import {
   deleteDevProductImage,
   setDevPrimaryImage,
   updateDevProduct,
+  updateDevProductImageColor,
 } from './devStore'
 import type { ProductInput } from '../types/product'
 
@@ -60,9 +61,10 @@ export async function addProductImage(
   fileOrUrl: File | string,
   isPrimary: boolean,
   sortOrder: number,
+  color?: string | null,
 ): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
-    await addDevProductImage(productId, fileOrUrl, isPrimary, sortOrder)
+    await addDevProductImage(productId, fileOrUrl, isPrimary, sortOrder, color)
     return
   }
 
@@ -79,10 +81,11 @@ export async function addProductImage(
       path: cleanUrl,
       is_primary: isPrimary,
       sort_order: sortOrder,
+      color: color || null,
     })
     if (error) {
       console.warn('Erro ao inserir URL em product_images no Supabase:', error)
-      await addDevProductImage(productId, cleanUrl, isPrimary, sortOrder)
+      await addDevProductImage(productId, cleanUrl, isPrimary, sortOrder, color)
     }
     return
   }
@@ -98,14 +101,27 @@ export async function addProductImage(
       path,
       is_primary: isPrimary,
       sort_order: sortOrder,
+      color: color || null,
     })
     if (error) {
       await removeStoragePath(path)
-      await addDevProductImage(productId, fileOrUrl, isPrimary, sortOrder)
+      await addDevProductImage(productId, fileOrUrl, isPrimary, sortOrder, color)
     }
   } catch (err) {
     console.warn('Falha no upload para Supabase, gravando em devStore local:', err)
-    await addDevProductImage(productId, fileOrUrl, isPrimary, sortOrder)
+    await addDevProductImage(productId, fileOrUrl, isPrimary, sortOrder, color)
+  }
+}
+
+export async function updateProductImageColor(imageId: string, color: string | null): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    updateDevProductImageColor(imageId, color)
+    return
+  }
+  const { error } = await supabase.from('product_images').update({ color: color || null }).eq('id', imageId)
+  if (error) {
+    console.warn('Erro ao atualizar cor da foto no Supabase:', error)
+    updateDevProductImageColor(imageId, color)
   }
 }
 

@@ -8,6 +8,7 @@ import type { Product } from '../types/product'
 import { IconCart, IconRuler, IconShield, IconTruck, IconTag, IconPercent, IconCheck } from '../components/ui/Icons'
 import { SizeGuideModal } from '../components/product/SizeGuideModal'
 import { calculateCouponDiscount, fetchActiveCoupon } from '../lib/coupons'
+import { getColorHex, getColorName, isColorLight } from '../lib/colors'
 
 export function ProductPage() {
   const { slug = '' } = useParams()
@@ -46,10 +47,21 @@ export function ProductPage() {
     fetchPublishedProductBySlug(slug)
       .then((data) => {
         if (!active) return
-        setProduct(data)
-        setSize(data?.sizes[0] ?? null)
-        setColor(data?.colors[0] ?? null)
-        setActiveImage(data ? primaryImage(data)?.public_url ?? null : null)
+        if (data) {
+          setProduct(data)
+          setSize(data.sizes[0] ?? null)
+          const firstColor = data.colors[0] ?? null
+          setColor(firstColor)
+          if (firstColor) {
+            const firstColorName = getColorName(firstColor)
+            const matchedImg = data.images.find(
+              (img) => img.color && getColorName(img.color).toLowerCase() === firstColorName.toLowerCase(),
+            )
+            setActiveImage(matchedImg?.public_url ?? primaryImage(data)?.public_url ?? null)
+          } else {
+            setActiveImage(primaryImage(data)?.public_url ?? null)
+          }
+        }
       })
       .catch(() => {
         if (active) setError('Não foi possível carregar este produto.')
@@ -127,12 +139,24 @@ export function ProductPage() {
     return true
   }
 
+  function handleSelectColor(colorOption: string) {
+    setColor(colorOption)
+    const colorName = getColorName(colorOption)
+    // Se houver uma foto cadastrada especificamente para esta cor, muda a foto principal imediatamente
+    const matchedImg = product?.images.find(
+      (img) => img.color && getColorName(img.color).toLowerCase() === colorName.toLowerCase(),
+    )
+    if (matchedImg) {
+      setActiveImage(matchedImg.public_url)
+    }
+  }
+
   function addToCart() {
     if (!validateSelection()) return
     addItem({
       productId: product!.id,
       size: product!.sizes.length ? size : null,
-      color: product!.colors.length ? color : null,
+      color: product!.colors.length ? (color ? getColorName(color) : null) : null,
       quantity: qty,
     })
     setMessage('Peça adicionada à sacola!')
@@ -144,7 +168,7 @@ export function ProductPage() {
     addItem({
       productId: product!.id,
       size: product!.sizes.length ? size : null,
-      color: product!.colors.length ? color : null,
+      color: product!.colors.length ? (color ? getColorName(color) : null) : null,
       quantity: qty,
     })
     navigate('/carrinho')
@@ -170,12 +194,29 @@ export function ProductPage() {
                 <button
                   key={img.id}
                   type="button"
-                  onClick={() => setActiveImage(img.public_url)}
-                  className={`aspect-square overflow-hidden rounded border transition ${
-                    activeImage === img.public_url ? 'border-gold shadow-md shadow-gold/20' : 'border-white/10 opacity-70 hover:opacity-100'
+                  onClick={() => {
+                    setActiveImage(img.public_url)
+                    if (img.color) {
+                      const matched = product.colors.find(
+                        (c) => getColorName(c).toLowerCase() === getColorName(img.color!).toLowerCase(),
+                      )
+                      if (matched) setColor(matched)
+                    }
+                  }}
+                  className={`relative aspect-square overflow-hidden rounded border transition ${
+                    activeImage === img.public_url
+                      ? 'border-gold shadow-md shadow-gold/20'
+                      : 'border-white/10 opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={img.public_url} alt="" className="h-full w-full object-cover" />
+                  {img.color && (
+                    <span
+                      className="absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border border-white/40 shadow-sm"
+                      style={{ backgroundColor: getColorHex(img.color) }}
+                      title={`Foto da cor: ${getColorName(img.color)}`}
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -284,25 +325,73 @@ export function ProductPage() {
             </fieldset>
           )}
 
-          {/* Seletor de Cores */}
+          {/* Seletor de Cores com Círculos Selecionáveis */}
           {product.colors.length > 0 && (
             <fieldset className="mt-6">
-              <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">Cor</legend>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {product.colors.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setColor(option)}
-                    className={`min-h-11 rounded border px-4 text-xs font-medium uppercase tracking-wider transition ${
-                      color === option
-                        ? 'border-gold bg-gold text-ink shadow-md shadow-gold/20'
-                        : 'border-white/20 text-paper hover:border-gold/50'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between">
+                <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">
+                  Cor:{' '}
+                  <span className="text-gold font-bold ml-1">
+                    {color ? getColorName(color) : 'Selecione uma cor'}
+                  </span>
+                </legend>
+                {product.images.some((img) => img.color) && (
+                  <span className="text-[10px] text-mute uppercase tracking-wider">
+                    Toque no círculo para ver a foto
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                {product.colors.map((option) => {
+                  const colorName = getColorName(option)
+                  const hex = getColorHex(option)
+                  const isSelected =
+                    color === option || (color && getColorName(color).toLowerCase() === colorName.toLowerCase())
+                  const isLight = isColorLight(hex)
+                  const matchedImg = product.images.find(
+                    (img) => img.color && getColorName(img.color).toLowerCase() === colorName.toLowerCase(),
+                  )
+
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => handleSelectColor(option)}
+                      title={`Selecionar cor: ${colorName}${matchedImg ? ' (com foto)' : ''}`}
+                      className={`group relative flex items-center gap-2 rounded-full p-1.5 transition cursor-pointer ${
+                        isSelected
+                          ? 'ring-2 ring-gold bg-gold/15 pr-3.5 shadow-md shadow-gold/20'
+                          : 'border border-white/15 bg-ink-2 hover:border-gold/50 hover:bg-white/5 pr-3'
+                      }`}
+                    >
+                      {/* Círculo da Cor */}
+                      <span
+                        className={`relative flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full transition-transform group-hover:scale-105 ${
+                          isLight ? 'border border-black/30' : 'border border-white/20'
+                        } ${isSelected ? 'scale-110 shadow-sm' : ''}`}
+                        style={{ backgroundColor: hex }}
+                      >
+                        {isSelected && (
+                          <IconCheck
+                            className={`w-3.5 h-3.5 ${
+                              isLight ? 'text-black' : 'text-white'
+                            } drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]`}
+                          />
+                        )}
+                      </span>
+
+                      {/* Nome da cor */}
+                      <span
+                        className={`text-xs font-semibold uppercase tracking-wider ${
+                          isSelected ? 'text-gold' : 'text-paper/90 group-hover:text-paper'
+                        }`}
+                      >
+                        {colorName}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </fieldset>
           )}

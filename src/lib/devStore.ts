@@ -203,6 +203,7 @@ export async function addDevProductImage(
   fileOrUrl: File | string,
   isPrimary: boolean,
   sortOrder: number,
+  color?: string | null,
 ): Promise<void> {
   const products = getDevProducts()
   const product = products.find((p) => p.id === productId)
@@ -235,9 +236,22 @@ export async function addDevProductImage(
     public_url: publicUrl,
     sort_order: sortOrder,
     is_primary: isPrimary || product.images.length === 0,
+    color: color || null,
   })
 
   saveDevProducts(products)
+}
+
+export function updateDevProductImageColor(imageId: string, color: string | null): void {
+  const products = getDevProducts()
+  for (const p of products) {
+    const img = p.images.find((i) => i.id === imageId)
+    if (img) {
+      img.color = color || null
+      saveDevProducts(products)
+      break
+    }
+  }
 }
 
 export function deleteDevProductImage(imageId: string): void {

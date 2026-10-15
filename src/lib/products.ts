@@ -9,6 +9,7 @@ type ImageJoin = {
   path: string
   sort_order: number
   is_primary: boolean
+  color?: string | null
 }
 
 function mapImage(row: ImageJoin): ProductImageRow | null {
@@ -21,6 +22,7 @@ function mapImage(row: ImageJoin): ProductImageRow | null {
     public_url: url,
     sort_order: row.sort_order,
     is_primary: row.is_primary,
+    color: row.color ?? null,
   }
 }
 
@@ -63,7 +65,7 @@ const SELECT = `
   stock, track_stock, available, published, is_launch, is_featured, is_promo,
   is_example, promo_price_cents, archived, brand, material, gender, model_type,
   created_at, updated_at,
-  product_images ( id, product_id, path, sort_order, is_primary )
+  product_images ( id, product_id, path, sort_order, is_primary, color )
 `
 
 export async function fetchPublishedProducts(): Promise<Product[]> {

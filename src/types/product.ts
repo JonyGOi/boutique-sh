@@ -54,6 +54,7 @@ export type ProductImageRow = {
   public_url: string
   sort_order: number
   is_primary: boolean
+  color?: string | null
 }
 
 export type Product = ProductRow & {

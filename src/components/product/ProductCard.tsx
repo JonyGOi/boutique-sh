@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { CATEGORIES } from '../../config/store'
 import { effectivePriceCents, formatBRL } from '../../lib/money'
 import { primaryImage } from '../../lib/products'
+import { getColorHex, getColorName } from '../../lib/colors'
 import type { Product } from '../../types/product'
 
 export function ProductCard({ product }: { product: Product }) {
@@ -35,7 +36,24 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </Link>
       <div className="flex flex-1 flex-col p-3">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-mute">{category}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-mute">{category}</p>
+          {product.colors.length > 0 && (
+            <div className="flex items-center gap-1 shrink-0" title={`${product.colors.length} cores disponíveis`}>
+              {product.colors.slice(0, 4).map((c) => (
+                <span
+                  key={c}
+                  className="h-2 w-2 rounded-full border border-white/30 shadow-sm"
+                  style={{ backgroundColor: getColorHex(c) }}
+                  title={getColorName(c)}
+                />
+              ))}
+              {product.colors.length > 4 && (
+                <span className="text-[9px] text-mute font-mono">+{product.colors.length - 4}</span>
+              )}
+            </div>
+          )}
+        </div>
         <h3 className="mt-1 font-display text-base sm:text-lg leading-tight text-paper group-hover:text-gold transition">
           <Link to={`/produto/${product.slug}`}>{product.name}</Link>
         </h3>
