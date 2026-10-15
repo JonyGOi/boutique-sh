@@ -96,6 +96,13 @@ export function SizeGuideModal({ category = '', isOpen, onClose }: SizeGuideModa
                   <td className="py-2.5 px-2 text-mute">100 - 105 cm</td>
                 </tr>
                 <tr>
+                  <td className="py-2.5 px-2 font-medium text-gold">MM</td>
+                  <td className="py-2.5 px-2 text-mute">40 - 42</td>
+                  <td className="py-2.5 px-2 text-mute">93 - 98 cm</td>
+                  <td className="py-2.5 px-2 text-mute">75 - 80 cm</td>
+                  <td className="py-2.5 px-2 text-mute">103 - 108 cm</td>
+                </tr>
+                <tr>
                   <td className="py-2.5 px-2 font-medium text-gold">G</td>
                   <td className="py-2.5 px-2 text-mute">42</td>
                   <td className="py-2.5 px-2 text-mute">96 - 102 cm</td>

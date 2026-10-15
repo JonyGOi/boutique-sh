@@ -8,7 +8,7 @@ import type { Product } from '../types/product'
 import { IconCart, IconRuler, IconShield, IconTruck, IconTag, IconPercent, IconCheck } from '../components/ui/Icons'
 import { SizeGuideModal } from '../components/product/SizeGuideModal'
 import { calculateCouponDiscount, fetchActiveCoupon } from '../lib/coupons'
-import { getColorHex, getColorName, isColorLight } from '../lib/colors'
+import { getColorHex, getColorName, getColorSizes, isColorLight } from '../lib/colors'
 
 export function ProductPage() {
   const { slug = '' } = useParams()
@@ -49,9 +49,11 @@ export function ProductPage() {
         if (!active) return
         if (data) {
           setProduct(data)
-          setSize(data.sizes[0] ?? null)
           const firstColor = data.colors[0] ?? null
           setColor(firstColor)
+          const colorSizes = firstColor ? getColorSizes(firstColor) : null
+          const initialSizes = colorSizes && colorSizes.length > 0 ? colorSizes : data.sizes
+          setSize(initialSizes[0] ?? null)
           if (firstColor) {
             const firstColorName = getColorName(firstColor)
             const matchedImg = data.images.find(
@@ -89,6 +91,9 @@ export function ProductPage() {
   const categoryLabel = categoryObj?.label ?? product.category
   const main = activeImage
 
+  const colorSizes = color ? getColorSizes(color) : null
+  const availableSizes = colorSizes && colorSizes.length > 0 ? colorSizes : product.sizes
+
   async function handleApplyCoupon(e?: React.FormEvent) {
     if (e) e.preventDefault()
     setCouponError(null)
@@ -120,7 +125,9 @@ export function ProductPage() {
 
   function validateSelection(): boolean {
     setMessage(null)
-    if (product!.sizes.length > 0 && !size) {
+    const selColorSizes = color ? getColorSizes(color) : null
+    const currentAvailable = selColorSizes && selColorSizes.length > 0 ? selColorSizes : (product?.sizes ?? [])
+    if (currentAvailable.length > 0 && !size) {
       setMessage('Por favor, selecione um tamanho antes de continuar.')
       return false
     }
@@ -148,6 +155,15 @@ export function ProductPage() {
     )
     if (matchedImg) {
       setActiveImage(matchedImg.public_url)
+    }
+
+    // Atualiza os tamanhos dinamicamente conforme a cor selecionada
+    const nextColorSizes = getColorSizes(colorOption)
+    const available = nextColorSizes && nextColorSizes.length > 0 ? nextColorSizes : (product?.sizes ?? [])
+    if (size && !available.includes(size)) {
+      setSize(available[0] ?? null)
+    } else if (!size && available.length > 0) {
+      setSize(available[0] ?? null)
     }
   }
 
@@ -293,10 +309,17 @@ export function ProductPage() {
           )}
 
           {/* Seletor de Tamanhos com Botão da Tabela de Medidas */}
-          {product.sizes.length > 0 && (
+          {availableSizes.length > 0 && (
             <fieldset className="mt-7">
               <div className="flex items-center justify-between">
-                <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">Tamanho</legend>
+                <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">
+                  Tamanho{' '}
+                  {colorSizes && colorSizes.length > 0 && (
+                    <span className="text-gold font-normal lowercase text-[11px]">
+                      (para a cor {getColorName(color!)})
+                    </span>
+                  )}
+                </legend>
                 <button
                   type="button"
                   onClick={() => setShowSizeModal(true)}
@@ -307,7 +330,7 @@ export function ProductPage() {
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                {product.sizes.map((option) => (
+                {availableSizes.map((option) => (
                   <button
                     key={option}
                     type="button"
@@ -346,6 +369,7 @@ export function ProductPage() {
                 {product.colors.map((option) => {
                   const colorName = getColorName(option)
                   const hex = getColorHex(option)
+                  const optionSizes = getColorSizes(option)
                   const isSelected =
                     color === option || (color && getColorName(color).toLowerCase() === colorName.toLowerCase())
                   const isLight = isColorLight(hex)
@@ -358,7 +382,9 @@ export function ProductPage() {
                       key={option}
                       type="button"
                       onClick={() => handleSelectColor(option)}
-                      title={`Selecionar cor: ${colorName}${matchedImg ? ' (com foto)' : ''}`}
+                      title={`Selecionar cor: ${colorName}${matchedImg ? ' (com foto)' : ''}${
+                        optionSizes ? ` - Tamanhos: ${optionSizes.join(', ')}` : ''
+                      }`}
                       className={`group relative flex items-center gap-2 rounded-full p-1.5 transition cursor-pointer ${
                         isSelected
                           ? 'ring-2 ring-gold bg-gold/15 pr-3.5 shadow-md shadow-gold/20'
@@ -381,14 +407,21 @@ export function ProductPage() {
                         )}
                       </span>
 
-                      {/* Nome da cor */}
-                      <span
-                        className={`text-xs font-semibold uppercase tracking-wider ${
-                          isSelected ? 'text-gold' : 'text-paper/90 group-hover:text-paper'
-                        }`}
-                      >
-                        {colorName}
-                      </span>
+                      {/* Nome da cor e tamanhos específicos se houver */}
+                      <div className="flex flex-col text-left">
+                        <span
+                          className={`text-xs font-semibold uppercase tracking-wider ${
+                            isSelected ? 'text-gold' : 'text-paper/90 group-hover:text-paper'
+                          }`}
+                        >
+                          {colorName}
+                        </span>
+                        {optionSizes && (
+                          <span className="text-[9px] text-mute font-mono">
+                            {optionSizes.join(', ')}
+                          </span>
+                        )}
+                      </div>
                     </button>
                   )
                 })}

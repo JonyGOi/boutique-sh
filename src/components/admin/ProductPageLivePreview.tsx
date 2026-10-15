@@ -12,7 +12,7 @@ import {
   IconEye,
 } from '../ui/Icons'
 import { CATEGORIES } from '../../config/store'
-import { getColorHex, getColorName, isColorLight } from '../../lib/colors'
+import { getColorHex, getColorName, getColorSizes, isColorLight } from '../../lib/colors'
 import { formatBRL, parseBRLToCents } from '../../lib/money'
 
 export interface PreviewImage {
@@ -88,6 +88,9 @@ export function ProductPageLivePreview({
   const categoryObj = CATEGORIES.find((c) => c.slug === category)
   const categoryLabel = categoryObj?.label ?? category
 
+  const colorSizes = selectedColor ? getColorSizes(selectedColor) : null
+  const activeSizes = colorSizes && colorSizes.length > 0 ? colorSizes : sizes
+
   function handleSelectColor(colorEntry: string) {
     setSelectedColor(colorEntry)
     const colorName = getColorName(colorEntry).toLowerCase()
@@ -96,6 +99,14 @@ export function ProductPageLivePreview({
     )
     if (match) {
       setManualImage(match.url)
+    }
+
+    const nextColorSizes = getColorSizes(colorEntry)
+    const nextAvailable = nextColorSizes && nextColorSizes.length > 0 ? nextColorSizes : sizes
+    if (selectedSize && !nextAvailable.includes(selectedSize)) {
+      setSelectedSize(nextAvailable[0] ?? null)
+    } else if (!selectedSize && nextAvailable.length > 0) {
+      setSelectedSize(nextAvailable[0] ?? null)
     }
   }
 
@@ -308,11 +319,16 @@ export function ProductPageLivePreview({
             )}
 
             {/* Seletor de Tamanhos */}
-            {sizes.length > 0 && (
+            {activeSizes.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] uppercase tracking-[0.2em] text-paper font-semibold">
-                    Tamanho
+                    Tamanho{' '}
+                    {colorSizes && colorSizes.length > 0 && (
+                      <span className="text-gold font-normal lowercase text-[10px]">
+                        (para a cor {getColorName(selectedColor!)})
+                      </span>
+                    )}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] text-gold">
                     <IconRuler className="w-3 h-3" />
@@ -320,8 +336,8 @@ export function ProductPageLivePreview({
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {sizes.map((s) => {
-                    const isSelected = (selectedSize || sizes[0]) === s
+                  {activeSizes.map((s) => {
+                    const isSelected = (selectedSize || activeSizes[0]) === s
                     return (
                       <button
                         key={s}
@@ -358,6 +374,7 @@ export function ProductPageLivePreview({
                   {colors.map((c) => {
                     const colorName = getColorName(c)
                     const hex = getColorHex(c)
+                    const optionSizes = getColorSizes(c)
                     const isSelected =
                       (selectedColor ? getColorName(selectedColor).toLowerCase() : '') ===
                       colorName.toLowerCase()
@@ -386,13 +403,20 @@ export function ProductPageLivePreview({
                             />
                           )}
                         </span>
-                        <span
-                          className={`text-[11px] font-semibold uppercase tracking-wider ${
-                            isSelected ? 'text-gold' : 'text-paper'
-                          }`}
-                        >
-                          {colorName}
-                        </span>
+                        <div className="flex flex-col text-left">
+                          <span
+                            className={`text-[11px] font-semibold uppercase tracking-wider ${
+                              isSelected ? 'text-gold' : 'text-paper'
+                            }`}
+                          >
+                            {colorName}
+                          </span>
+                          {optionSizes && (
+                            <span className="text-[9px] text-mute font-mono">
+                              {optionSizes.join(', ')}
+                            </span>
+                          )}
+                        </div>
                       </button>
                     )
                   })}

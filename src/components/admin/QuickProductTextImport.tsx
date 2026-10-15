@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { IconSparkles, IconCheck, IconInfo } from '../ui/Icons'
 import { PRODUCT_CATEGORIES } from '../../config/store'
-import { formatColorEntry, getColorHex } from '../../lib/colors'
+import {
+  formatColorEntry,
+  getColorHex,
+  getColorName,
+  getColorSizes,
+  POPULAR_COLORS,
+  FASHION_COLORS,
+} from '../../lib/colors'
 
 export interface ParsedProductData {
   name?: string
@@ -23,10 +30,10 @@ interface QuickProductTextImportProps {
   disabled?: boolean
 }
 
-const SAMPLE_TEXT = `Nome: calça jeans Reta
+const SAMPLE_TEXT = `Nome: Calça Jeans Reta
 Marca: M.OFFICER
-Tamanho: 40
-Cor: preto
+Tamanhos: M, MM, G, GG
+Cor: Preto (Tam: M, MM, G, GG), Azul (Tam: M, G)
 valor: 159,90
 Tipo: Calça`
 
@@ -91,26 +98,70 @@ export function parseProductText(rawText: string): ParsedProductData {
       continue
     }
 
-    // 4. Cor / Cores
+    // 4. Cor / Cores (com suporte opcional a tamanhos específicos por cor, ex: "Preto (M, MM, G)")
     if (key === 'cor' || key === 'cores') {
-      // Split by comma, slash, semicolon, or " e "
-      const rawTokens = value.split(/[,;/]+|\s+e\s+/i)
+      // Divide por vírgula, ponto e vírgula ou " e ", exceto se estiver dentro de parênteses
+      const rawTokens = value.split(/[,;/]+(?![^(]*\))|\s+e\s+(?![^(]*\))/i)
       const parsedColors: string[] = []
+      const extractedSizes: string[] = []
+
       for (const token of rawTokens) {
         const cleaned = token.trim()
         if (!cleaned) continue
-        // Capitalize first letter of each word (e.g. "off white" -> "Off White")
-        const formattedName = cleaned
-          .split(' ')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-          .join(' ')
-        const hex = getColorHex(formattedName)
-        parsedColors.push(formatColorEntry(formattedName, hex))
+
+        // Detecta se a cor tem tamanhos específicos entre parênteses: ex: "Preto (Tam: M, MM, G)" ou "Preto (M, MM, G)"
+        const parenMatch = cleaned.match(/^([^(]+)\s*\((?:tam(?:anho)?s?:\s*)?([^)]+)\)$/i)
+        if (parenMatch) {
+          const rawColorName = parenMatch[1].trim()
+          const formattedName = rawColorName
+            .split(' ')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ')
+          const hex = getColorHex(formattedName)
+          const colorSizes = parenMatch[2]
+            .split(/[,;/]+|\s+/)
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean)
+          parsedColors.push(formatColorEntry(formattedName, hex, colorSizes))
+          colorSizes.forEach((s) => extractedSizes.push(s))
+        } else {
+          const formattedName = cleaned
+            .split(' ')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ')
+          const hex = getColorHex(formattedName)
+          parsedColors.push(formatColorEntry(formattedName, hex))
+        }
       }
+
       if (parsedColors.length > 0) {
         result.colors = Array.from(new Set(parsedColors))
       }
+      if (extractedSizes.length > 0) {
+        result.sizes = Array.from(new Set([...(result.sizes || []), ...extractedSizes]))
+      }
       continue
+    }
+
+    // 4.1 Linhas onde a própria chave é uma cor (ex: "Preto: M, MM, G, GG" ou "Branco: P, M")
+    const isColorNameKey =
+      POPULAR_COLORS.some((c) => c.toLowerCase() === key) || Boolean(FASHION_COLORS[key])
+    if (isColorNameKey) {
+      const colorSizes = value
+        .split(/[,;/]+|\s+/)
+        .map((s) => s.trim().toUpperCase())
+        .filter(Boolean)
+      if (colorSizes.length > 0) {
+        const formattedName = key.charAt(0).toUpperCase() + key.slice(1)
+        const hex = getColorHex(formattedName)
+        const newEntry = formatColorEntry(formattedName, hex, colorSizes)
+        result.colors = [
+          ...(result.colors?.filter((c) => getColorName(c).toLowerCase() !== key) || []),
+          newEntry,
+        ]
+        result.sizes = Array.from(new Set([...(result.sizes || []), ...colorSizes]))
+        continue
+      }
     }
 
     // 5. Preço / Valor
@@ -343,7 +394,14 @@ export function QuickProductTextImport({ onApply, disabled }: QuickProductTextIm
                 )}
                 {parsed.colors && parsed.colors.length > 0 && (
                   <span className="inline-flex items-center gap-1 rounded bg-white/10 px-2 py-0.5 text-[11px] text-paper">
-                    <strong className="text-gold">Cor:</strong> {parsed.colors.map((c) => c.split('|')[0]).join(', ')}
+                    <strong className="text-gold">Cor:</strong>{' '}
+                    {parsed.colors
+                      .map((c) => {
+                        const name = getColorName(c)
+                        const szs = getColorSizes(c)
+                        return szs && szs.length > 0 ? `${name} [${szs.join(', ')}]` : name
+                      })
+                      .join(', ')}
                   </span>
                 )}
                 {parsed.price && (

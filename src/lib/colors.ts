@@ -167,18 +167,60 @@ export function getColorHex(raw: string): string {
   return `hsl(${hue}, 40%, 45%)`
 }
 
+/** Sugestões populares de tamanhos para roupas e calçados */
+export const POPULAR_LETTER_SIZES = ['PP', 'P', 'M', 'MM', 'G', 'GG', 'XG', 'G1', 'G2', 'Único']
+export const POPULAR_NUMERIC_SIZES = ['34', '36', '38', '40', '42', '44', '46', '48', '50']
+export const POPULAR_FOOTWEAR_SIZES = ['33', '34', '35', '36', '37', '38', '39', '40']
+
 /**
- * Formata um par nome/hex para armazenamento (ex: "Preto" ou "Azul Petróleo|#0e7490").
+ * Extrai a lista de tamanhos específicos configurados para esta cor (se houver).
+ * Suporta "Nome|#hex|M,G,GG" ou "Nome||M,G,GG".
+ * Se não houver tamanhos específicos, retorna null (indicando que usa os tamanhos gerais da peça).
  */
-export function formatColorEntry(name: string, customHex?: string): string {
+export function getColorSizes(raw: string): string[] | null {
+  if (!raw) return null
+  const parts = raw.split('|')
+  if (parts.length > 2 && parts[2].trim()) {
+    const list = parts[2]
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean)
+    return list.length > 0 ? list : null
+  }
+  return null
+}
+
+/**
+ * Formata um par nome/hex/tamanhos para armazenamento (ex: "Preto", "Azul Petróleo|#0e7490" ou "Preto|#18181b|M,MM,G,GG").
+ */
+export function formatColorEntry(
+  name: string,
+  customHex?: string,
+  specificSizes?: string[] | null,
+): string {
   const cleanName = name.trim()
   if (!cleanName) return ''
-  if (customHex && customHex.startsWith('#')) {
-    const defaultHex = getColorHex(cleanName)
-    if (defaultHex.toLowerCase() !== customHex.toLowerCase()) {
-      return `${cleanName}|${customHex}`
-    }
+
+  const effectiveHex =
+    customHex && customHex.startsWith('#') ? customHex : getColorHex(cleanName)
+
+  const sizesStr =
+    specificSizes && specificSizes.length > 0
+      ? specificSizes
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
+          .join(',')
+      : ''
+
+  if (sizesStr) {
+    return `${cleanName}|${effectiveHex}|${sizesStr}`
   }
+
+  const defaultHex = getColorHex(cleanName)
+  if (effectiveHex.toLowerCase() !== defaultHex.toLowerCase()) {
+    return `${cleanName}|${effectiveHex}`
+  }
+
   return cleanName
 }
 

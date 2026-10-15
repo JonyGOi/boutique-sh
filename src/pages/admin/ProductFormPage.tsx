@@ -20,9 +20,12 @@ import { QuickProductTextImport, type ParsedProductData } from '../../components
 import { ProductPageLivePreview, type PreviewImage } from '../../components/admin/ProductPageLivePreview'
 import {
   POPULAR_COLORS,
+  POPULAR_LETTER_SIZES,
+  POPULAR_NUMERIC_SIZES,
   formatColorEntry,
   getColorHex,
   getColorName,
+  getColorSizes,
   isColorLight,
 } from '../../lib/colors'
 import type { Product, ProductImageRow } from '../../types/product'
@@ -579,13 +582,36 @@ export function ProductFormPage() {
 
   function handleUpdateColorHex(colorEntry: string, newHex: string) {
     const name = getColorName(colorEntry)
-    const updated = formatColorEntry(name, newHex)
+    const existingSizes = getColorSizes(colorEntry)
+    const updated = formatColorEntry(name, newHex, existingSizes)
     setForm((prev) => ({
       ...prev,
       colors: prev.colors.map((c) =>
         getColorName(c).toLowerCase() === name.toLowerCase() ? updated : c,
       ),
     }))
+  }
+
+  function handleUpdateColorSizes(colorEntry: string, newSizes: string[] | null) {
+    const name = getColorName(colorEntry)
+    const hex = getColorHex(colorEntry)
+    const updated = formatColorEntry(name, hex, newSizes)
+    setForm((prev) => ({
+      ...prev,
+      colors: prev.colors.map((c) =>
+        getColorName(c).toLowerCase() === name.toLowerCase() ? updated : c,
+      ),
+    }))
+  }
+
+  function handleToggleColorSize(colorEntry: string, sizeToken: string) {
+    const token = sizeToken.trim().toUpperCase()
+    if (!token) return
+    const currentSizes = getColorSizes(colorEntry) || []
+    const updated = currentSizes.includes(token)
+      ? currentSizes.filter((s) => s !== token)
+      : [...currentSizes, token]
+    handleUpdateColorSizes(colorEntry, updated.length > 0 ? updated : null)
   }
 
   function handleTriggerUploadForColor(colorName: string) {
@@ -931,17 +957,126 @@ export function ProductFormPage() {
         </div>
       </div>
 
-      <ChipField
-        label="Tamanhos"
-        value={sizeInput}
-        onValue={setSizeInput}
-        items={form.sizes}
-        onAdd={() => {
-          addChip('sizes', sizeInput)
-          setSizeInput('')
-        }}
-        onRemove={(item) => setForm({ ...form, sizes: form.sizes.filter((s: string) => s !== item) })}
-      />
+      {/* SEÇÃO: TAMANHOS GERAIS DA PEÇA */}
+      <div className="space-y-3 rounded border border-white/10 bg-ink-2 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+          <p className="text-xs uppercase tracking-[0.2em] font-bold text-paper">
+            Tamanhos Gerais da Peça
+          </p>
+          <span className="text-[11px] text-mute">
+            Clique nas opções abaixo para adicionar rapidamente ou digite tamanhos personalizados
+          </span>
+        </div>
+
+        {/* Sugestões Rápidas de Letras (PP, P, M, MM, G, GG, XG, etc.) */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="text-[11px] text-mute uppercase tracking-wider font-semibold">
+            Letras:
+          </span>
+          {POPULAR_LETTER_SIZES.map((letter) => {
+            const isAdded = form.sizes.includes(letter)
+            return (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => {
+                  if (isAdded) {
+                    setForm({ ...form, sizes: form.sizes.filter((s) => s !== letter) })
+                  } else {
+                    addChip('sizes', letter)
+                  }
+                }}
+                className={`min-h-9 px-3 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+                  isAdded
+                    ? 'border border-gold bg-gold text-ink shadow-sm'
+                    : 'border border-white/20 bg-ink text-paper hover:border-gold/60'
+                }`}
+              >
+                {letter} {isAdded && '✓'}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Sugestões Rápidas de Números (34, 36, 38, 40, etc.) */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          <span className="text-[11px] text-mute uppercase tracking-wider font-semibold">
+            Números:
+          </span>
+          {POPULAR_NUMERIC_SIZES.map((num) => {
+            const isAdded = form.sizes.includes(num)
+            return (
+              <button
+                key={num}
+                type="button"
+                onClick={() => {
+                  if (isAdded) {
+                    setForm({ ...form, sizes: form.sizes.filter((s) => s !== num) })
+                  } else {
+                    addChip('sizes', num)
+                  }
+                }}
+                className={`min-h-8 px-2.5 rounded text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+                  isAdded
+                    ? 'border border-gold bg-gold text-ink shadow-sm'
+                    : 'border border-white/20 bg-ink text-paper hover:border-gold/60'
+                }`}
+              >
+                {num} {isAdded && '✓'}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Digitação Manual de Tamanho Personalizado */}
+        <div className="flex gap-2 pt-2">
+          <input
+            className="min-h-11 flex-1 border border-white/15 bg-ink px-3 text-sm text-paper focus:border-gold focus:outline-none"
+            value={sizeInput}
+            onChange={(e) => setSizeInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                addChip('sizes', sizeInput)
+                setSizeInput('')
+              }
+            }}
+            placeholder="Ou digite outro tamanho (ex: 38/40, MM, Infantil 12) e pressione Enter"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              addChip('sizes', sizeInput)
+              setSizeInput('')
+            }}
+          >
+            Adicionar
+          </Button>
+        </div>
+
+        {/* Lista de Tamanhos Ativos para a Peça */}
+        {form.sizes.length > 0 ? (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
+            {form.sizes.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded border border-gold bg-gold/15 px-3 py-1.5 text-xs text-gold font-bold hover:bg-gold hover:text-ink transition cursor-pointer shadow-sm"
+                onClick={() => setForm({ ...form, sizes: form.sizes.filter((s) => s !== item) })}
+                title="Clique para remover este tamanho"
+              >
+                <span>{item}</span>
+                <span className="text-[11px] font-normal">×</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-mute italic pt-1">
+            Nenhum tamanho selecionado ainda. Clique nas opções acima para incluir.
+          </p>
+        )}
+      </div>
       {/* SEÇÃO: CORES DA PEÇA & FOTOS EXCLUSIVAS POR COR (NOVO TIPO DE PEÇA MULTICOLOR) */}
       <section className="rounded border border-gold/40 bg-ink-2 p-5 space-y-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-white/10 pb-3">
@@ -1054,6 +1189,7 @@ export function ProductFormPage() {
               const colorName = getColorName(colorEntry)
               const hex = getColorHex(colorEntry)
               const isLight = isColorLight(hex)
+              const colorSpecificSizes = getColorSizes(colorEntry)
 
               // Foto associada a esta cor
               const assignedImage = isNew
@@ -1166,6 +1302,94 @@ export function ProductFormPage() {
                           + Adicionar Foto para {colorName}
                         </button>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Bloco de Tamanhos Exclusivos por Cor */}
+                  <div className="pt-2.5 border-t border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase tracking-wider text-paper font-semibold">
+                        Tamanhos para {colorName}:
+                      </span>
+                      {colorSpecificSizes ? (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateColorSizes(colorEntry, null)}
+                          className="text-[10px] text-mute hover:text-red-400 underline cursor-pointer"
+                          title="Voltar a usar os mesmos tamanhos gerais da peça"
+                        >
+                          Usar gerais da peça
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateColorSizes(
+                              colorEntry,
+                              form.sizes.length > 0 ? [...form.sizes] : ['M', 'G'],
+                            )
+                          }
+                          className="text-[10px] text-gold hover:underline font-bold cursor-pointer"
+                        >
+                          + Personalizar tamanhos desta cor
+                        </button>
+                      )}
+                    </div>
+
+                    {colorSpecificSizes ? (
+                      <div className="rounded border border-gold/30 bg-gold/5 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between text-[10px] text-gold font-medium">
+                          <span>Tamanhos ativos nesta cor ({colorSpecificSizes.length}):</span>
+                          <span className="text-[9px] text-mute">Clique para ligar/desligar</span>
+                        </div>
+
+                        {/* Botões rápidos: PP, P, M, MM, G, GG, XG, etc. */}
+                        <div className="flex flex-wrap items-center gap-1">
+                          {POPULAR_LETTER_SIZES.map((s) => {
+                            const isIncluded = colorSpecificSizes.includes(s)
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => handleToggleColorSize(colorEntry, s)}
+                                className={`h-6 px-2 rounded text-[10px] font-bold uppercase transition cursor-pointer ${
+                                  isIncluded
+                                    ? 'bg-gold text-ink shadow-sm'
+                                    : 'border border-white/20 bg-ink text-mute hover:border-gold/50'
+                                }`}
+                              >
+                                {s} {isIncluded && '✓'}
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* Chips com os tamanhos configurados para esta cor */}
+                        <div className="flex flex-wrap gap-1 pt-1 border-t border-gold/20">
+                          {colorSpecificSizes.map((sz) => (
+                            <span
+                              key={sz}
+                              className="inline-flex items-center gap-1 rounded border border-gold/40 bg-ink px-2 py-0.5 text-[10px] font-bold text-gold"
+                            >
+                              <span>{sz}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleColorSize(colorEntry, sz)}
+                                className="text-mute hover:text-red-400 cursor-pointer ml-0.5"
+                                title={`Remover tamanho ${sz} da cor ${colorName}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-mute italic">
+                        {form.sizes.length > 0
+                          ? `Usa os tamanhos gerais (${form.sizes.join(', ')}).`
+                          : 'Usa os tamanhos gerais da peça.'}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -1640,56 +1864,5 @@ function Check({
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {label}
     </label>
-  )
-}
-
-function ChipField({
-  label,
-  value,
-  onValue,
-  items,
-  onAdd,
-  onRemove,
-}: {
-  label: string
-  value: string
-  onValue: (v: string) => void
-  items: string[]
-  onAdd: () => void
-  onRemove: (item: string) => void
-}) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-[0.2em]">{label}</p>
-      <div className="mt-2 flex gap-2">
-        <input
-          className="min-h-11 flex-1 border border-white/15 bg-ink-2 px-3 text-sm focus:border-gold focus:outline-none"
-          value={value}
-          onChange={(e) => onValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              onAdd()
-            }
-          }}
-          placeholder="Digite e pressione Enter"
-        />
-        <Button type="button" variant="outline" onClick={onAdd}>
-          Adicionar
-        </Button>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {items.map((item) => (
-          <button
-            key={item}
-            type="button"
-            className="min-h-11 border border-gold px-3 text-xs text-gold"
-            onClick={() => onRemove(item)}
-          >
-            {item} ×
-          </button>
-        ))}
-      </div>
-    </div>
   )
 }
