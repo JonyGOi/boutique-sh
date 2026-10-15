@@ -16,13 +16,13 @@ export function Home() {
       <section className="relative min-h-[72dvh] sm:min-h-[78dvh] overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1800&q=80"
-          alt="SH Boutique Moda Feminina"
+          alt="Boutique SH Moda Feminina"
           className="absolute inset-0 h-full w-full object-cover"
           fetchPriority="high"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/70 to-ink/30" />
         <div className="relative mx-auto flex min-h-[72dvh] sm:min-h-[78dvh] max-w-6xl flex-col justify-end px-4 pb-12 sm:pb-16 pt-24">
-          <p className="text-xs uppercase tracking-[0.4em] text-gold">SH Boutique • Alta Moda</p>
+          <p className="text-xs uppercase tracking-[0.4em] text-gold">Boutique SH • Alta Moda</p>
           <h1 className="mt-3 max-w-xl font-display text-4xl sm:text-6xl md:text-7xl leading-tight text-paper">
             Elegância em cada detalhe.
           </h1>

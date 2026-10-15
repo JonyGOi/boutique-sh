@@ -60,7 +60,7 @@ export function Catalog() {
         {/* Cabeçalho da Coleção */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.32em] text-gold">SH Boutique • Catálogo</p>
+            <p className="text-[11px] uppercase tracking-[0.32em] text-gold">Boutique SH • Catálogo</p>
             <h1 className="mt-1 font-display text-3xl sm:text-4xl text-paper">
               {activeCategoryLabel && activeCategoryLabel !== 'Todas as Peças'
                 ? activeCategoryLabel

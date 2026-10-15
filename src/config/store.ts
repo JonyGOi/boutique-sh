@@ -1,6 +1,6 @@
 /** Configuração comercial fixa. O número do WhatsApp não pode ser alterado por URL, formulário ou carrinho. */
 export const STORE = {
-  name: 'SH Boutique',
+  name: 'Boutique SH',
   country: 'BR',
   locale: 'pt-BR',
   currency: 'BRL',
