@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, ButtonLink } from '../components/ui/Button'
+import { ButtonLink } from '../components/ui/Button'
 import { useCart } from '../context/CartContext'
 import { cartKey, totalCents, validateCartAgainstCatalog } from '../lib/cart'
 import { formatBRL } from '../lib/money'
 import { fetchPublishedByIds, primaryImage } from '../lib/products'
 import { buildWhatsAppCheckoutUrl } from '../lib/whatsapp'
+import { getDiscountForTotal } from '../config/store'
+import { IconPercent, IconWhatsApp } from '../components/ui/Icons'
 import type { Product, ValidatedLine } from '../types/product'
 
 export function CartPage() {
@@ -40,7 +42,9 @@ export function CartPage() {
   }, [items])
 
   const { lines, errors } = validateCartAgainstCatalog(items, products)
-  const total = totalCents(lines)
+  const subtotal = totalCents(lines)
+  const { appliedTier, nextTier, discountCents, finalCents, neededForNextCents, progressPercent } =
+    getDiscountForTotal(subtotal)
 
   function checkout() {
     setCheckoutError(null)
@@ -52,7 +56,7 @@ export function CartPage() {
       setCheckoutError(errors[0] ?? 'Não há produtos válidos para finalizar.')
       return
     }
-    const url = buildWhatsAppCheckoutUrl(lines, total)
+    const url = buildWhatsAppCheckoutUrl(lines, subtotal, discountCents, finalCents)
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
@@ -75,6 +79,35 @@ export function CartPage() {
         Os totais usam os preços atuais do catálogo. Frete não está incluído. O pedido só é enviado quando você
         confirmar a mensagem no WhatsApp.
       </p>
+
+      {/* Barra de Progresso de Meta de Desconto */}
+      <div className="mt-6 rounded border border-gold/40 bg-gold/10 p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="font-semibold text-paper flex items-center gap-1.5">
+            <IconPercent className="w-4 h-4 text-gold shrink-0" />
+            {appliedTier && !nextTier && (
+              <span className="text-gold font-bold">Parabéns! Você desbloqueou o desconto máximo de {appliedTier.percent}%!</span>
+            )}
+            {appliedTier && nextTier && (
+              <span>
+                Você já garantiu <strong className="text-gold">{appliedTier.percent}% OFF</strong>! Faltam apenas <strong className="text-gold">{formatBRL(neededForNextCents)}</strong> para liberar <strong>{nextTier.percent}% OFF</strong>!
+              </span>
+            )}
+            {!appliedTier && nextTier && (
+              <span>
+                Adicione mais <strong className="text-gold">{formatBRL(neededForNextCents)}</strong> para ganhar <strong className="text-gold">{nextTier.percent}% de DESCONTO</strong>!
+              </span>
+            )}
+          </span>
+          <span className="text-[11px] font-bold text-gold shrink-0">{progressPercent}%</span>
+        </div>
+        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-ink/60 border border-white/10">
+          <div
+            className="h-full bg-gold transition-all duration-500 ease-out rounded-full"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
 
       {loading && <p className="mt-6 text-sm text-mute">Atualizando preços…</p>}
       {error && <p className="mt-6 text-sm text-gold">{error}</p>}
@@ -105,16 +138,41 @@ export function CartPage() {
       </ul>
 
       <div className="mt-10 border-t border-white/10 pt-6">
-        <p className="flex justify-between font-display text-2xl">
-          <span>Total dos produtos</span>
-          <span className="text-gold">{formatBRL(total)}</span>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-mute">
+            <span>Subtotal dos produtos</span>
+            <span>{formatBRL(subtotal)}</span>
+          </div>
+          {discountCents > 0 && (
+            <div className="flex justify-between text-sm text-gold font-semibold">
+              <span className="inline-flex items-center gap-1">
+                <IconPercent className="w-3.5 h-3.5" />
+                Desconto por meta ({appliedTier?.percent}%)
+              </span>
+              <span>-{formatBRL(discountCents)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-display text-2xl pt-2 border-t border-white/10 text-paper">
+            <span>Total a pagar</span>
+            <span className="text-gold font-semibold">{formatBRL(finalCents)}</span>
+          </div>
+        </div>
+
+        <p className="mt-2 text-xs text-mute">
+          Pagamento e entrega serão combinados diretamente no WhatsApp oficial. Nada é cobrado neste site.
         </p>
-        <p className="mt-2 text-xs text-mute">Pagamento e entrega serão combinados no WhatsApp. Nada é cobrado aqui.</p>
+
         {checkoutError && <p className="mt-4 text-sm text-gold">{checkoutError}</p>}
+
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button type="button" onClick={checkout}>
+          <button
+            type="button"
+            onClick={checkout}
+            className="flex-1 inline-flex min-h-12 items-center justify-center gap-2 rounded bg-gold px-6 text-xs uppercase tracking-[0.2em] text-ink font-bold hover:bg-gold-light transition shadow-lg shadow-gold/20 active:scale-95 cursor-pointer"
+          >
+            <IconWhatsApp className="w-4 h-4" />
             Finalizar Pedido via WhatsApp
-          </Button>
+          </button>
           <ButtonLink to="/colecao" variant="outline">
             Continuar comprando
           </ButtonLink>

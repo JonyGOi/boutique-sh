@@ -32,6 +32,10 @@ const empty: ProductInput = {
   is_promo: false,
   promo_price_cents: null,
   archived: false,
+  brand: '',
+  material: '',
+  gender: '',
+  model_type: '',
 }
 
 type PendingImage = {
@@ -91,6 +95,10 @@ export function ProductFormPage() {
           is_promo: data.is_promo,
           promo_price_cents: data.promo_price_cents,
           archived: data.archived,
+          brand: data.brand ?? '',
+          material: data.material ?? '',
+          gender: data.gender ?? '',
+          model_type: data.model_type ?? '',
         })
         setPrice(formatBRL(data.price_cents).replace('R$', '').trim())
         setPromo(
@@ -133,6 +141,10 @@ export function ProductFormPage() {
       price_cents: priceCents,
       promo_price_cents: form.is_promo ? promoCents : null,
       stock: form.track_stock ? Math.max(0, Number(form.stock ?? 0)) : null,
+      brand: form.brand?.trim() || null,
+      material: form.material?.trim() || null,
+      gender: form.gender?.trim() || null,
+      model_type: form.model_type?.trim() || null,
     }
   }
 
@@ -378,6 +390,86 @@ export function ProductFormPage() {
             ))}
           </select>
         </label>
+      </div>
+
+      {/* Subcategorias dinâmicas baseadas na Categoria selecionada */}
+      <div className="rounded border border-gold/30 bg-ink p-4 space-y-4">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-gold font-bold">
+          Subcategorias & Detalhes da Peça
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+          {/* Marca / Grife (para Vestidos, Camisas, Calças, Bermudas, Blazers, Blusas, Calçados) */}
+          <label className="block text-xs uppercase tracking-[0.18em]">
+            Marca / Grife
+            <input
+              className="mt-1.5 min-h-11 w-full rounded border border-white/15 bg-ink-2 px-3 text-sm text-paper focus:border-gold focus:outline-none"
+              value={form.brand ?? ''}
+              onChange={(e) => setForm({ ...form, brand: e.target.value })}
+              placeholder="Ex: Farm, Zara, Animale, Boutique SH..."
+            />
+          </label>
+
+          {/* Tecido / Material (para Vestidos, Camisas, Calças, Bermudas, Blazers, Blusas) */}
+          {form.category !== 'calcados' && form.category !== 'acessorios' && (
+            <label className="block text-xs uppercase tracking-[0.18em]">
+              Tecido / Composição
+              <input
+                className="mt-1.5 min-h-11 w-full rounded border border-white/15 bg-ink-2 px-3 text-sm text-paper focus:border-gold focus:outline-none"
+                value={form.material ?? ''}
+                onChange={(e) => setForm({ ...form, material: e.target.value })}
+                placeholder="Ex: Seda, Linho Puro, Algodão, Alfaiataria..."
+              />
+            </label>
+          )}
+
+          {/* Sexo (para Camisas, Calças, Bermudas) */}
+          {(form.category === 'camisas' || form.category === 'calcas' || form.category === 'bermudas') && (
+            <label className="block text-xs uppercase tracking-[0.18em]">
+              Sexo / Linha
+              <select
+                className="mt-1.5 min-h-11 w-full rounded border border-white/15 bg-ink-2 px-3 text-sm text-paper focus:border-gold focus:outline-none"
+                value={form.gender ?? ''}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+              >
+                <option value="">Selecione o sexo</option>
+                <option value="Feminino">Feminino</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Unissex">Unissex</option>
+              </select>
+            </label>
+          )}
+
+          {/* Modelo (para Blusas, Calçados, Acessórios) */}
+          {(form.category === 'blusas' || form.category === 'calcados' || form.category === 'acessorios') && (
+            <label className="block text-xs uppercase tracking-[0.18em]">
+              {form.category === 'acessorios' ? 'Tipo de Acessório' : 'Modelo / Corte'}
+              {form.category === 'acessorios' ? (
+                <select
+                  className="mt-1.5 min-h-11 w-full rounded border border-white/15 bg-ink-2 px-3 text-sm text-paper focus:border-gold focus:outline-none"
+                  value={form.model_type ?? ''}
+                  onChange={(e) => setForm({ ...form, model_type: e.target.value })}
+                >
+                  <option value="">Selecione o tipo</option>
+                  <option value="Bolsas">Bolsas</option>
+                  <option value="Relógios">Relógios</option>
+                  <option value="Pulseiras">Pulseiras</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              ) : (
+                <input
+                  className="mt-1.5 min-h-11 w-full rounded border border-white/15 bg-ink-2 px-3 text-sm text-paper focus:border-gold focus:outline-none"
+                  value={form.model_type ?? ''}
+                  onChange={(e) => setForm({ ...form, model_type: e.target.value })}
+                  placeholder={
+                    form.category === 'calcados'
+                      ? 'Ex: Rasteira, Salto Fino, Scarpin, Tênis...'
+                      : 'Ex: Regata, Manga Curta, Cropped, Gola Alta...'
+                  }
+                />
+              )}
+            </label>
+          )}
+        </div>
       </div>
 
       <ChipField

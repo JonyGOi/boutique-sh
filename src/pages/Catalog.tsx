@@ -13,15 +13,53 @@ export function Catalog() {
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
   const categoria = params.get('categoria') ?? ''
+  const marca = params.get('marca') ?? ''
+  const tecido = params.get('tecido') ?? ''
+  const sexo = params.get('sexo') ?? ''
+  const modelo = params.get('modelo') ?? ''
   const sort = (params.get('ordenar') as SortKey) || 'recentes'
+
+  // Facetas disponíveis baseadas nos produtos
+  const availableBrands = useMemo(() => {
+    const set = new Set<string>()
+    products.forEach((p) => {
+      if ((!categoria || categoria === 'promocoes' || p.category === categoria) && p.brand) set.add(p.brand)
+    })
+    return [...set].sort()
+  }, [products, categoria])
+
+  const availableMaterials = useMemo(() => {
+    const set = new Set<string>()
+    products.forEach((p) => {
+      if ((!categoria || categoria === 'promocoes' || p.category === categoria) && p.material) set.add(p.material)
+    })
+    return [...set].sort()
+  }, [products, categoria])
+
+  const availableGenders = ['Feminino', 'Masculino', 'Unissex']
+
+  const availableModels = useMemo(() => {
+    if (categoria === 'acessorios') {
+      return ['Bolsas', 'Relógios', 'Pulseiras']
+    }
+    const set = new Set<string>()
+    products.forEach((p) => {
+      if ((!categoria || p.category === categoria) && p.model_type) set.add(p.model_type)
+    })
+    return [...set].sort()
+  }, [products, categoria])
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase()
     let list = products.filter((p) => {
-      if (query && !`${p.name} ${p.description}`.toLowerCase().includes(query)) return false
-      if (categoria === 'lancamentos') return p.is_launch
-      if (categoria === 'promocoes') return p.is_promo
-      if (categoria) return p.category === categoria
+      if (query && !`${p.name} ${p.description} ${p.brand ?? ''} ${p.material ?? ''}`.toLowerCase().includes(query))
+        return false
+      if (categoria === 'promocoes' && !p.is_promo) return false
+      if (categoria && categoria !== 'promocoes' && p.category !== categoria) return false
+      if (marca && p.brand?.toLowerCase() !== marca.toLowerCase()) return false
+      if (tecido && p.material?.toLowerCase() !== tecido.toLowerCase()) return false
+      if (sexo && p.gender?.toLowerCase() !== sexo.toLowerCase()) return false
+      if (modelo && (p.model_type?.toLowerCase() !== modelo.toLowerCase())) return false
       return true
     })
     list = [...list].sort((a, b) => {
@@ -31,7 +69,7 @@ export function Catalog() {
       return +new Date(b.created_at) - +new Date(a.created_at)
     })
     return list
-  }, [products, q, categoria, sort])
+  }, [products, q, categoria, marca, tecido, sexo, modelo, sort])
 
   function update(key: string, value: string) {
     const next = new URLSearchParams(params)
@@ -48,12 +86,20 @@ export function Catalog() {
 
   const activeCategoryLabel = STORE_CATEGORIES_WITH_ICONS.find((c) => c.slug === categoria)?.label
 
+  const hasSubfilters =
+    (categoria === 'camisas' || categoria === 'calcas' || categoria === 'bermudas' || categoria === 'vestidos' || categoria === 'blazers' || categoria === 'blusas' || categoria === 'calcados' || categoria === 'acessorios' || categoria === 'promocoes')
+
   return (
     <div>
       {/* Barra de Categorias Horizontal Superior (Fixa ao Rolar) */}
       <CategoryBar
         activeSlug={categoria}
-        onSelect={(slug) => update('categoria', slug)}
+        onSelect={(slug) => {
+          const next = new URLSearchParams()
+          if (slug) next.set('categoria', slug)
+          if (sort !== 'recentes') next.set('ordenar', sort)
+          setParams(next)
+        }}
         sticky
       />
 
@@ -84,7 +130,7 @@ export function Catalog() {
               type="search"
               value={q}
               onChange={(e) => update('q', e.target.value)}
-              placeholder="Pesquisar por nome ou detalhe..."
+              placeholder="Pesquisar por nome, marca ou detalhe..."
               className="min-h-11 w-full rounded border border-white/15 bg-ink-2 pl-9 pr-8 text-sm text-paper placeholder:text-mute focus:border-gold focus:outline-none transition"
             />
             {q && (
@@ -114,12 +160,75 @@ export function Catalog() {
           </div>
         </div>
 
+        {/* SUBCATEGORIAS ESPECÍFICAS DA CATEGORIA SELECIONADA */}
+        {hasSubfilters && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded border border-white/10 bg-ink-2/60 p-3">
+            <span className="text-[10px] uppercase tracking-wider text-gold font-bold mr-1">Filtrar por:</span>
+
+            {/* Sexo (Camisas, Calças, Bermudas) */}
+            {(categoria === 'camisas' || categoria === 'calcas' || categoria === 'bermudas') && (
+              <select
+                value={sexo}
+                onChange={(e) => update('sexo', e.target.value)}
+                className="h-8 rounded border border-white/15 bg-ink px-2 text-xs text-paper focus:border-gold focus:outline-none"
+              >
+                <option value="">Todos os sexos</option>
+                {availableGenders.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Marcas (se houver marcas cadastradas) */}
+            {availableBrands.length > 0 && (
+              <select
+                value={marca}
+                onChange={(e) => update('marca', e.target.value)}
+                className="h-8 rounded border border-white/15 bg-ink px-2 text-xs text-paper focus:border-gold focus:outline-none"
+              >
+                <option value="">Todas as marcas</option>
+                {availableBrands.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Tecido (se houver tecidos cadastrados) */}
+            {categoria !== 'calcados' && categoria !== 'acessorios' && availableMaterials.length > 0 && (
+              <select
+                value={tecido}
+                onChange={(e) => update('tecido', e.target.value)}
+                className="h-8 rounded border border-white/15 bg-ink px-2 text-xs text-paper focus:border-gold focus:outline-none"
+              >
+                <option value="">Todos os tecidos</option>
+                {availableMaterials.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Modelo / Tipo (Blusas, Calçados, Acessórios) */}
+            {(categoria === 'blusas' || categoria === 'calcados' || categoria === 'acessorios') && availableModels.length > 0 && (
+              <select
+                value={modelo}
+                onChange={(e) => update('modelo', e.target.value)}
+                className="h-8 rounded border border-white/15 bg-ink px-2 text-xs text-paper focus:border-gold focus:outline-none"
+              >
+                <option value="">{categoria === 'acessorios' ? 'Todos os tipos' : 'Todos os modelos'}</option>
+                {availableModels.map((mod) => (
+                  <option key={mod} value={mod}>{mod}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+
         {/* Tags de Filtros Ativos */}
-        {(categoria || q) && (
+        {(categoria || q || marca || tecido || sexo || modelo) && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-mute text-[11px] uppercase tracking-wider">Filtros:</span>
+            <span className="text-mute text-[11px] uppercase tracking-wider">Filtros ativos:</span>
             {categoria && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold font-medium">
                 {activeCategoryLabel}
                 <button
                   type="button"
@@ -131,15 +240,42 @@ export function Catalog() {
                 </button>
               </span>
             )}
+            {sexo && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold">
+                Sexo: {sexo}
+                <button type="button" onClick={() => update('sexo', '')} className="hover:opacity-75">
+                  <IconClose className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {marca && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold">
+                Marca: {marca}
+                <button type="button" onClick={() => update('marca', '')} className="hover:opacity-75">
+                  <IconClose className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {tecido && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold">
+                Tecido: {tecido}
+                <button type="button" onClick={() => update('tecido', '')} className="hover:opacity-75">
+                  <IconClose className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {modelo && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 text-gold">
+                Modelo: {modelo}
+                <button type="button" onClick={() => update('modelo', '')} className="hover:opacity-75">
+                  <IconClose className="w-3 h-3" />
+                </button>
+              </span>
+            )}
             {q && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-2.5 py-1 text-paper">
                 &ldquo;{q}&rdquo;
-                <button
-                  type="button"
-                  onClick={() => update('q', '')}
-                  className="hover:opacity-75"
-                  title="Remover busca"
-                >
+                <button type="button" onClick={() => update('q', '')} className="hover:opacity-75">
                   <IconClose className="w-3 h-3" />
                 </button>
               </span>
@@ -147,7 +283,7 @@ export function Catalog() {
             <button
               type="button"
               onClick={clearFilters}
-              className="text-xs text-mute underline hover:text-gold transition ml-1"
+              className="text-xs text-mute underline hover:text-gold transition ml-1 cursor-pointer"
             >
               Limpar todos
             </button>

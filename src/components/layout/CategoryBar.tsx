@@ -3,25 +3,27 @@ import { Link } from 'react-router-dom'
 import {
   IconSparkles,
   IconDress,
-  IconBlouse,
   IconShirt,
   IconPants,
-  IconSkirt,
+  IconShorts,
   IconSuit,
+  IconBlouse,
+  IconShoe,
+  IconWatch,
   IconTag,
-  IconBolt,
 } from '../ui/Icons'
 
 export const STORE_CATEGORIES_WITH_ICONS = [
   { slug: '', label: 'Todas as Peças', icon: IconSparkles },
   { slug: 'vestidos', label: 'Vestidos', icon: IconDress },
-  { slug: 'blusas', label: 'Blusas', icon: IconBlouse },
   { slug: 'camisas', label: 'Camisas', icon: IconShirt },
   { slug: 'calcas', label: 'Calças', icon: IconPants },
-  { slug: 'saias', label: 'Saias', icon: IconSkirt },
-  { slug: 'conjuntos', label: 'Conjuntos', icon: IconSuit },
+  { slug: 'bermudas', label: 'Bermudas', icon: IconShorts },
+  { slug: 'blazers', label: 'Blazers', icon: IconSuit },
+  { slug: 'blusas', label: 'Blusas', icon: IconBlouse },
+  { slug: 'calcados', label: 'Calçados / Sandálias', icon: IconShoe },
+  { slug: 'acessorios', label: 'Acessórios', icon: IconWatch },
   { slug: 'promocoes', label: 'Promoções', icon: IconTag },
-  { slug: 'lancamentos', label: 'Lançamentos', icon: IconBolt },
 ] as const
 
 interface CategoryBarProps {

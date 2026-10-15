@@ -17,6 +17,10 @@ export type ProductRow = {
   is_example: boolean
   promo_price_cents: number | null
   archived: boolean
+  brand?: string | null
+  material?: string | null
+  gender?: string | null
+  model_type?: string | null
   created_at: string
   updated_at: string
 }
@@ -37,6 +41,10 @@ export type ProductInput = {
   is_promo: boolean
   promo_price_cents: number | null
   archived: boolean
+  brand?: string | null
+  material?: string | null
+  gender?: string | null
+  model_type?: string | null
 }
 
 export type ProductImageRow = {

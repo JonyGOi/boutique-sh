@@ -48,6 +48,10 @@ function mapProduct(row: ProductRow & { product_images?: ImageJoin[] | null }): 
     is_example: row.is_example,
     promo_price_cents: row.promo_price_cents,
     archived: row.archived,
+    brand: row.brand ?? null,
+    material: row.material ?? null,
+    gender: row.gender ?? null,
+    model_type: row.model_type ?? null,
     created_at: row.created_at,
     updated_at: row.updated_at,
     images,
@@ -57,7 +61,8 @@ function mapProduct(row: ProductRow & { product_images?: ImageJoin[] | null }): 
 const SELECT = `
   id, name, slug, description, price_cents, category, sizes, colors,
   stock, track_stock, available, published, is_launch, is_featured, is_promo,
-  is_example, promo_price_cents, archived, created_at, updated_at,
+  is_example, promo_price_cents, archived, brand, material, gender, model_type,
+  created_at, updated_at,
   product_images ( id, product_id, path, sort_order, is_primary )
 `
 

@@ -9,8 +9,8 @@ export function Logo({ compact = false }: { compact?: boolean }) {
       </span>
       {!compact && (
         <span className="flex flex-col leading-none">
-          <span className="font-display text-xl tracking-[0.28em] text-paper">{STORE.name}</span>
-          <span className="mt-1 text-[10px] uppercase tracking-[0.35em] text-mute">Moda feminina</span>
+          <span className="font-display text-xl tracking-[0.28em] text-paper group-hover:text-gold transition">{STORE.name}</span>
+          <span className="mt-1 text-[10px] uppercase tracking-[0.35em] text-mute">Alta Moda & Estilo</span>
         </span>
       )}
     </Link>

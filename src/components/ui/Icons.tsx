@@ -203,3 +203,95 @@ export function IconBolt({ className = 'w-5 h-5', ...props }: IconProps) {
     </svg>
   )
 }
+
+export function IconShoe({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M3 17h18l-1.5-4c-.5-1.5-2-2.5-3.5-2.5h-3L9 6 4 12v5Z" />
+      <path d="M4 17v3" />
+      <path d="M19 17v3" />
+    </svg>
+  )
+}
+
+export function IconShorts({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M6 4h12l-1 11h-4l-1-5-1 5H7L6 4Z" />
+      <line x1="6" y1="7" x2="18" y2="7" />
+    </svg>
+  )
+}
+
+export function IconWatch({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <circle cx="12" cy="12" r="6" />
+      <polyline points="12 10 12 12 13.5 13.5" />
+      <path d="M9 6.5V3h6v3.5" />
+      <path d="M9 17.5V21h6v-3.5" />
+    </svg>
+  )
+}
+
+export function IconRuler({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M21.3 8.7 15.3 2.7a2 2 0 0 0-2.8 0L2.7 12.5a2 2 0 0 0 0 2.8l6 6a2 2 0 0 0 2.8 0l9.8-9.8a2 2 0 0 0 0-2.8Z" />
+      <path d="m7.5 10.5 2 2" />
+      <path d="m10.5 7.5 2 2" />
+      <path d="m13.5 4.5 2 2" />
+      <path d="m10.5 13.5 3 3" />
+    </svg>
+  )
+}
+
+export function IconCart({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <circle cx="8" cy="21" r="1" />
+      <circle cx="19" cy="21" r="1" />
+      <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+    </svg>
+  )
+}
+
+export function IconPercent({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <line x1="19" y1="5" x2="5" y2="19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>
+  )
+}
+
+export function IconTruck({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <rect x="1" y="4" width="14" height="12" rx="1" />
+      <path d="M15 8h4l3 4v4h-7V8z" />
+      <circle cx="5.5" cy="18.5" r="2.5" />
+      <circle cx="17.5" cy="18.5" r="2.5" />
+    </svg>
+  )
+}
+
+export function IconShield({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  )
+}
+
+export function IconCreditCard({ className = 'w-5 h-5', ...props }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+    </svg>
+  )
+}
+
