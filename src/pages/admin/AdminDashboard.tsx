@@ -7,13 +7,14 @@ import { formatBRL } from '../../lib/money'
 import { fetchAdminProducts } from '../../lib/products'
 import { exportCatalogJson } from '../../lib/devStore'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
-import { IconDownload, IconKey, IconHanger, IconPercent } from '../../components/ui/Icons'
+import { IconDownload, IconKey, IconHanger, IconPercent, IconChart } from '../../components/ui/Icons'
 import { CouponsManager } from '../../components/admin/CouponsManager'
+import { AnalyticsDashboard } from '../../components/admin/AnalyticsDashboard'
 import type { Product } from '../../types/product'
 
 export function AdminDashboard() {
   const location = useLocation()
-  const [activeTab, setActiveTab] = useState<'produtos' | 'cupons'>('produtos')
+  const [activeTab, setActiveTab] = useState<'produtos' | 'cupons' | 'metricas'>('produtos')
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -202,11 +203,11 @@ export function AdminDashboard() {
       )}
 
       {/* Abas de Navegação do Painel */}
-      <div className="flex border-b border-white/10 mb-8 gap-4">
+      <div className="flex border-b border-white/10 mb-8 gap-4 overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveTab('produtos')}
-          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition ${
+          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition cursor-pointer shrink-0 ${
             activeTab === 'produtos'
               ? 'border-gold text-gold'
               : 'border-transparent text-mute hover:text-paper'
@@ -218,7 +219,7 @@ export function AdminDashboard() {
         <button
           type="button"
           onClick={() => setActiveTab('cupons')}
-          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition ${
+          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition cursor-pointer shrink-0 ${
             activeTab === 'cupons'
               ? 'border-gold text-gold'
               : 'border-transparent text-mute hover:text-paper'
@@ -227,10 +228,24 @@ export function AdminDashboard() {
           <IconPercent className="w-3.5 h-3.5" />
           <span>Cupons de Desconto</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('metricas')}
+          className={`inline-flex items-center gap-2 pb-3 px-2 text-xs uppercase tracking-[0.2em] font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+            activeTab === 'metricas'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-mute hover:text-paper'
+          }`}
+        >
+          <IconChart className="w-4 h-4" />
+          <span>Métricas de Clientes</span>
+        </button>
       </div>
 
       {activeTab === 'cupons' ? (
         <CouponsManager onNotice={(msg) => setNotice(msg)} />
+      ) : activeTab === 'metricas' ? (
+        <AnalyticsDashboard />
       ) : (
         <>
           <div className="flex flex-wrap items-end justify-between gap-4">

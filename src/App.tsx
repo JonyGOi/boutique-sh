@@ -10,6 +10,7 @@ import { CartPage } from './pages/CartPage'
 import { Privacy } from './pages/Privacy'
 import { NotFound } from './pages/NotFound'
 import { ScrollToTop } from './components/ScrollToTop'
+import { SiteTracker } from './components/SiteTracker'
 
 const AdminLogin = lazy(() =>
   import('./pages/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })),
@@ -33,6 +34,7 @@ export default function App() {
       <CartProvider>
         <HashRouter>
           <ScrollToTop />
+          <SiteTracker />
           <Suspense fallback={<p className="px-4 py-20 text-center text-mute">Carregando…</p>}>
           <Routes>
             <Route element={<Layout />}>

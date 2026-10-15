@@ -390,3 +390,71 @@ export function deleteDevCoupon(id: string): void {
   const coupons = getDevCoupons().filter((c) => c.id !== id)
   saveDevCoupons(coupons)
 }
+
+// ============================================
+// VISITANTES & ANÁLISE DE MÉDIAS (DEV FALLBACK)
+// ============================================
+import type { SiteVisitor } from '../types/analytics'
+
+const VISITORS_STORAGE_KEY = 'sh_boutique_dev_visitors'
+
+export function getDevVisitors(): SiteVisitor[] {
+  try {
+    const raw = localStorage.getItem(VISITORS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as SiteVisitor[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+export function saveDevVisitors(visitors: SiteVisitor[]): void {
+  try {
+    localStorage.setItem(VISITORS_STORAGE_KEY, JSON.stringify(visitors))
+  } catch (err) {
+    console.error('Falha ao salvar visitantes locais:', err)
+  }
+}
+
+export function recordDevVisit(
+  visitorId: string,
+  deviceType: string,
+  browser: string,
+  os: string,
+  path: string,
+  isNewSession: boolean,
+): void {
+  const visitors = getDevVisitors()
+  const existing = visitors.find((v) => v.visitor_id === visitorId)
+  const now = new Date().toISOString()
+
+  if (existing) {
+    if (isNewSession) {
+      existing.visit_count += 1
+      existing.last_visit_at = now
+      existing.last_path = path || existing.last_path
+      existing.device_type = deviceType || existing.device_type
+      existing.browser = browser || existing.browser
+      existing.os = os || existing.os
+    } else {
+      existing.last_visit_at = now
+      existing.last_path = path || existing.last_path
+    }
+  } else {
+    visitors.unshift({
+      visitor_id: visitorId,
+      first_visit_at: now,
+      last_visit_at: now,
+      visit_count: 1,
+      device_type: deviceType,
+      browser,
+      os,
+      last_path: path,
+      created_at: now,
+    })
+  }
+
+  saveDevVisitors(visitors)
+}
+
