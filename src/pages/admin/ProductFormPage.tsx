@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { MAX_IMAGES_PER_PRODUCT, PRODUCT_CATEGORIES } from '../../config/store'
 import {
@@ -14,7 +14,7 @@ import {
 import { normalizeImageUrl, validateImageFile } from '../../lib/images'
 import { formatBRL, parseBRLToCents } from '../../lib/money'
 import { fetchAdminProduct } from '../../lib/products'
-import { IconFolder, IconLink, IconCheck, IconInfo, IconStar, IconCrop, IconEye } from '../../components/ui/Icons'
+import { IconFolder, IconLink, IconCheck, IconInfo, IconStar, IconCrop, IconEye, IconSparkles } from '../../components/ui/Icons'
 import { ImageCropModal } from '../../components/admin/ImageCropModal'
 import { QuickProductTextImport, type ParsedProductData } from '../../components/admin/QuickProductTextImport'
 import { ProductPageLivePreview, type PreviewImage } from '../../components/admin/ProductPageLivePreview'
@@ -103,6 +103,23 @@ export function ProductFormPage() {
 
   // Layout View mode: 'split' (side-by-side on wide screens) | 'form' | 'preview'
   const [layoutView, setLayoutView] = useState<'split' | 'form' | 'preview'>('split')
+
+  // Modo de Cadastro derivado da URL: 'manual' (Formulário Completo) | 'rapido' (Cadastro Facilitado por Texto)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const formTab: 'manual' | 'rapido' =
+    (searchParams.get('aba') || searchParams.get('tab')) === 'rapido' ? 'rapido' : 'manual'
+
+  function handleTabChange(tab: 'manual' | 'rapido') {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        if (tab === 'rapido') next.set('aba', 'rapido')
+        else next.delete('aba')
+        return next
+      },
+      { replace: true },
+    )
+  }
 
   function handleApplyQuickText(data: ParsedProductData) {
     setForm((prev) => {
@@ -406,6 +423,29 @@ export function ProductFormPage() {
         is_primary: item.id === imgId,
       })),
     )
+  }
+
+  async function handleRemoveExistingImage(imgId: string, imgPath: string) {
+    if (!id) return
+    try {
+      await deleteProductImage(imgId, imgPath)
+      const refreshed = await fetchAdminProduct(id)
+      setProduct(refreshed)
+      setSuccess('Foto removida com sucesso.')
+    } catch {
+      setError('Erro ao remover fotografia.')
+    }
+  }
+
+  async function handleSetPrimaryExisting(imgId: string) {
+    if (!id) return
+    try {
+      await setPrimaryImage(id, imgId)
+      const refreshed = await fetchAdminProduct(id)
+      setProduct(refreshed)
+    } catch {
+      setError('Erro ao definir foto principal.')
+    }
   }
 
   // Inicia enquadramento de foto pendente
@@ -776,6 +816,37 @@ export function ProductFormPage() {
         </div>
       </div>
 
+      {/* Seletor de Abas: Formulário Completo vs Cadastro Rápido */}
+      <div className="flex border-b border-white/10 gap-2 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => handleTabChange('manual')}
+          className={`inline-flex items-center gap-2 pb-3 px-3 text-xs uppercase tracking-[0.18em] font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+            formTab === 'manual'
+              ? 'border-gold text-gold font-bold'
+              : 'border-transparent text-mute hover:text-paper'
+          }`}
+        >
+          <span>Formulário Completo</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange('rapido')}
+          className={`inline-flex items-center gap-2 pb-3 px-3 text-xs uppercase tracking-[0.18em] font-semibold border-b-2 transition cursor-pointer shrink-0 ${
+            formTab === 'rapido'
+              ? 'border-gold text-gold font-bold'
+              : 'border-transparent text-mute hover:text-paper'
+          }`}
+        >
+          <IconSparkles className="w-3.5 h-3.5 text-gold" />
+          <span>Cadastro Rápido (por Texto)</span>
+          <span className="rounded bg-gold/15 text-gold text-[10px] px-1.5 py-0.5 tracking-wider font-bold">
+            Rápido
+          </span>
+        </button>
+      </div>
+
       {/* Grid Principal: Formulário + Prévia ao Vivo */}
       <div
         className={`grid gap-8 items-start ${
@@ -788,8 +859,355 @@ export function ProductFormPage() {
             onSubmit={onSubmit}
             className={`space-y-6 ${layoutView === 'split' ? 'xl:col-span-7' : 'max-w-3xl'}`}
           >
-            {/* Bloco 1: Cadastro Rápido Facilitado por Texto */}
-            <QuickProductTextImport onApply={handleApplyQuickText} disabled={pending} />
+            {/* Inputs Ocultos de Arquivos Compartilhados Entre Abas */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => void onUpload(e.target.files)}
+            />
+            <input
+              ref={cropFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={onSelectFileToCrop}
+            />
+            <input
+              ref={colorFileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => void onUploadColorFile(e.target.files)}
+            />
+
+            {/* ============================================================ */}
+            {/* ABA: CADASTRO RÁPIDO (POR TEXTO)                              */}
+            {/* ============================================================ */}
+            {formTab === 'rapido' && (
+              <div className="space-y-6">
+                <div className="rounded border border-gold/30 bg-ink-2 p-4">
+                  <div className="flex items-start gap-3">
+                    <IconSparkles className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gold">
+                        Modo de Cadastro Rápido por Texto
+                      </h3>
+                      <p className="mt-1 text-xs text-mute leading-relaxed">
+                        Cole o texto da peça com nome, marca, tamanhos, cores, valor e tipo. O sistema identifica os campos automaticamente e atualiza a prévia ao vivo em tempo real.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Importador de Texto com Prévia e Reconhecimento */}
+                <QuickProductTextImport onApply={handleApplyQuickText} disabled={pending} />
+
+                {/* Anexar Fotos Diretamente na Aba de Cadastro Rápido */}
+                <div className="rounded border border-white/15 bg-ink p-4 space-y-4 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                    <div>
+                      <h4 className="text-xs uppercase tracking-wider font-semibold text-paper flex items-center gap-2">
+                        <span className="flex h-2 w-2 rounded-full bg-gold" />
+                        Fotos da Peça ({totalImagesCount} {totalImagesCount === 1 ? 'cadastrada' : 'cadastradas'})
+                      </h4>
+                      <p className="text-[11px] text-mute mt-0.5">
+                        Anexe fotos para visualizar instantaneamente na prévia da loja virtual.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs text-gold hover:bg-gold hover:text-ink transition font-medium cursor-pointer"
+                      >
+                        <IconFolder className="w-3.5 h-3.5" />
+                        + Fotos do Dispositivo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => cropFileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 rounded border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs text-gold hover:bg-gold hover:text-ink transition font-medium cursor-pointer"
+                      >
+                        <IconCrop className="w-3.5 h-3.5" />
+                        Recortar (3:4)
+                      </button>
+                    </div>
+                  </div>
+
+                  {totalImagesCount > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {isNew
+                        ? pendingNewImages.map((img) => (
+                            <div
+                              key={img.id}
+                              className="relative aspect-[3/4] rounded border border-white/15 bg-ink-2 overflow-hidden group shadow"
+                            >
+                              <img src={img.preview} alt="Foto" className="w-full h-full object-cover" />
+                              {img.is_primary && (
+                                <span className="absolute top-1.5 left-1.5 rounded bg-gold px-1.5 py-0.5 text-[9px] font-bold text-ink uppercase tracking-wider shadow">
+                                  Principal
+                                </span>
+                              )}
+                              {img.color && (
+                                <span className="absolute bottom-1.5 left-1.5 rounded bg-ink/90 border border-white/20 px-1.5 py-0.5 text-[9px] text-gold font-medium">
+                                  {getColorName(img.color)}
+                                </span>
+                              )}
+                              <div className="absolute inset-0 bg-ink/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition p-2">
+                                {!img.is_primary && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSetPrimaryPending(img.id)}
+                                    className="text-[11px] text-paper font-semibold hover:text-gold transition cursor-pointer"
+                                  >
+                                    Definir Capa
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => startCropPending(img)}
+                                  className="text-[11px] text-gold hover:underline transition cursor-pointer"
+                                >
+                                  Recortar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePending(img.id)}
+                                  className="text-[11px] text-red-400 hover:underline transition cursor-pointer"
+                                >
+                                  Remover
+                                </button>
+                                {form.colors.length > 0 && (
+                                  <select
+                                    value={img.color ? getColorName(img.color) : ''}
+                                    onChange={(e) => void handleAssignColorToImage(img, e.target.value)}
+                                    className="mt-1 w-full rounded border border-white/20 bg-ink px-1.5 py-0.5 text-[10px] text-paper focus:border-gold focus:outline-none"
+                                  >
+                                    <option value="">Sem cor vinculada</option>
+                                    {form.colors.map((c) => {
+                                      const cName = getColorName(c)
+                                      return (
+                                        <option key={c} value={cName}>
+                                          Cor: {cName}
+                                        </option>
+                                      )
+                                    })}
+                                  </select>
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        : (product?.images ?? []).map((img) => (
+                            <div
+                              key={img.id}
+                              className="relative aspect-[3/4] rounded border border-white/15 bg-ink-2 overflow-hidden group shadow"
+                            >
+                              <img src={img.public_url} alt="Foto" className="w-full h-full object-cover" />
+                              {img.is_primary && (
+                                <span className="absolute top-1.5 left-1.5 rounded bg-gold px-1.5 py-0.5 text-[9px] font-bold text-ink uppercase tracking-wider shadow">
+                                  Principal
+                                </span>
+                              )}
+                              {img.color && (
+                                <span className="absolute bottom-1.5 left-1.5 rounded bg-ink/90 border border-white/20 px-1.5 py-0.5 text-[9px] text-gold font-medium">
+                                  {getColorName(img.color)}
+                                </span>
+                              )}
+                              <div className="absolute inset-0 bg-ink/80 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition p-2">
+                                {!img.is_primary && (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleSetPrimaryExisting(img.id)}
+                                    className="text-[11px] text-paper font-semibold hover:text-gold transition cursor-pointer"
+                                  >
+                                    Definir Capa
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => startCropExisting(img)}
+                                  className="text-[11px] text-gold hover:underline transition cursor-pointer"
+                                >
+                                  Recortar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void handleRemoveExistingImage(img.id, img.path)}
+                                  className="text-[11px] text-red-400 hover:underline transition cursor-pointer"
+                                >
+                                  Remover
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded border border-dashed border-white/20 hover:border-gold/50 bg-ink-2/50 p-6 text-center cursor-pointer transition"
+                    >
+                      <IconFolder className="w-8 h-8 text-gold/70 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-paper">
+                        Nenhuma foto adicionada ainda
+                      </p>
+                      <p className="text-[11px] text-mute mt-1">
+                        Clique aqui para selecionar fotos do seu dispositivo ou arraste arquivos.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Resumo da Peça Identificada */}
+                {form.name && (
+                  <div className="rounded border border-gold/30 bg-ink p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <h4 className="text-xs uppercase tracking-wider font-bold text-gold">
+                        Resumo da Peça Identificada
+                      </h4>
+                      <span className="text-[11px] text-mute">
+                        Categoria:{' '}
+                        <strong className="text-paper">
+                          {PRODUCT_CATEGORIES.find((c) => c.slug === form.category)?.label ?? form.category}
+                        </strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-mute block text-[10px] uppercase">Nome da Peça</span>
+                        <span className="text-paper font-medium">{form.name}</span>
+                      </div>
+                      <div>
+                        <span className="text-mute block text-[10px] uppercase">Preço</span>
+                        <span className="text-gold font-bold">{price ? `R$ ${price}` : '—'}</span>
+                      </div>
+                      {form.brand && (
+                        <div>
+                          <span className="text-mute block text-[10px] uppercase">Marca</span>
+                          <span className="text-paper">{form.brand}</span>
+                        </div>
+                      )}
+                      {form.model_type && (
+                        <div>
+                          <span className="text-mute block text-[10px] uppercase">Tipo / Modelo</span>
+                          <span className="text-paper">{form.model_type}</span>
+                        </div>
+                      )}
+                      {form.colors.length > 0 && (
+                        <div className="col-span-2">
+                          <span className="text-mute block text-[10px] uppercase">Cores ({form.colors.length})</span>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            {form.colors.map((c) => {
+                              const hex = getColorHex(c)
+                              const name = getColorName(c)
+                              return (
+                                <span
+                                  key={c}
+                                  className="inline-flex items-center gap-1.5 rounded border border-white/15 bg-ink-2 px-2 py-0.5 text-[10px] text-paper"
+                                >
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full border border-white/30"
+                                    style={{ backgroundColor: hex }}
+                                  />
+                                  {name}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {form.sizes.length > 0 && (
+                        <div className="col-span-2">
+                          <span className="text-mute block text-[10px] uppercase">Tamanhos</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {form.sizes.map((s) => (
+                              <span
+                                key={s}
+                                className="rounded bg-white/10 px-2 py-0.5 text-[10px] text-paper font-semibold"
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Opções de Publicação Rápida */}
+                <div className="rounded border border-white/15 bg-ink p-4 space-y-3">
+                  <h4 className="text-xs uppercase tracking-wider font-semibold text-paper">
+                    Visibilidade na Loja
+                  </h4>
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.published}
+                        onChange={(e) => setForm({ ...form, published: e.target.checked })}
+                        className="rounded border-white/20 bg-ink-2 text-gold focus:ring-gold"
+                      />
+                      <span>Publicar imediatamente na loja</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.is_launch}
+                        onChange={(e) => setForm({ ...form, is_launch: e.target.checked })}
+                        className="rounded border-white/20 bg-ink-2 text-gold focus:ring-gold"
+                      />
+                      <span>Marcar como Lançamento</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={form.is_featured}
+                        onChange={(e) => setForm({ ...form, is_featured: e.target.checked })}
+                        className="rounded border-white/20 bg-ink-2 text-gold focus:ring-gold"
+                      />
+                      <span>Destacar na Página Inicial</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Mensagens de Feedback */}
+                {error && <p className="text-sm text-gold">{error}</p>}
+                {success && <p className="text-sm text-green-400 font-medium">{success}</p>}
+                {uploadingProgress && (
+                  <p className="text-xs text-gold animate-pulse">{uploadingProgress}</p>
+                )}
+
+                {/* Botões de Ação na Aba Rápida */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <Button type="submit" disabled={pending}>
+                    {pending
+                      ? uploadingProgress || 'Salvando produto…'
+                      : isNew
+                        ? form.published
+                          ? 'Publicar Peça na Loja'
+                          : 'Salvar Peça (Rascunho)'
+                        : 'Salvar Alterações'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleTabChange('manual')}
+                  >
+                    Revisar no Formulário Completo →
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* ABA: FORMULÁRIO COMPLETO (MANUAL)                            */}
+            {/* ============================================================ */}
+            {formTab === 'manual' && (
+              <>
 
             {/* Bloco 2: Atalhos Rápidos para Fotografias e Prévia */}
             <div className="rounded border border-white/15 bg-ink p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
@@ -1093,14 +1511,6 @@ export function ProductFormPage() {
           </div>
         </div>
 
-        {/* Input oculto para upload de foto específica de uma cor */}
-        <input
-          ref={colorFileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => void onUploadColorFile(e.target.files)}
-        />
 
         {/* Adicionar Nova Cor com Seletor de Tom Visual */}
         <div className="space-y-3">
@@ -1485,22 +1895,6 @@ export function ProductFormPage() {
         {/* ABA 1: Armazenamento Local (Computador ou Celular) */}
         {imageTab === 'local' && (
           <div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => void onUpload(e.target.files)}
-            />
-            {/* Input oculto para corte guiado direto de 1 arquivo */}
-            <input
-              ref={cropFileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={onSelectFileToCrop}
-            />
             <div
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-white/20 hover:border-gold/60 bg-ink p-6 text-center cursor-pointer transition rounded group"
@@ -1786,21 +2180,32 @@ export function ProductFormPage() {
         )}
       </section>
 
-      {error && <p className="text-sm text-gold">{error}</p>}
-      {success && <p className="text-sm text-green-400 font-medium">{success}</p>}
+                {error && <p className="text-sm text-gold">{error}</p>}
+                {success && <p className="text-sm text-green-400 font-medium">{success}</p>}
+                {uploadingProgress && (
+                  <p className="text-xs text-gold animate-pulse">{uploadingProgress}</p>
+                )}
 
-      <Button type="submit" disabled={pending}>
-        {pending ? 'Salvando…' : 'Salvar Alterações'}
-      </Button>
+                <Button type="submit" disabled={pending}>
+                  {pending
+                    ? uploadingProgress || 'Salvando…'
+                    : isNew
+                      ? form.published
+                        ? 'Publicar Peça na Loja'
+                        : 'Salvar Peça (Rascunho)'
+                      : 'Salvar Alterações'}
+                </Button>
+              </>
+            )}
 
-      <ImageCropModal
-        isOpen={cropModalOpen}
-        imageUrl={cropImageUrl}
-        fileName={cropFileName}
-        onClose={() => setCropModalOpen(false)}
-        onConfirm={(cropped) => void onConfirmCrop(cropped)}
-      />
-    </form>
+            <ImageCropModal
+              isOpen={cropModalOpen}
+              imageUrl={cropImageUrl}
+              fileName={cropFileName}
+              onClose={() => setCropModalOpen(false)}
+              onConfirm={(cropped) => void onConfirmCrop(cropped)}
+            />
+          </form>
   )}
 
         {/* COLUNA DIREITA OU PRÉVIA: Como ficará a página do produto na loja */}

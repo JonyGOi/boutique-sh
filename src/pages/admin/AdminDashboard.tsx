@@ -7,7 +7,7 @@ import { formatBRL } from '../../lib/money'
 import { fetchAdminProducts } from '../../lib/products'
 import { exportCatalogJson } from '../../lib/devStore'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
-import { IconDownload, IconKey, IconHanger, IconPercent, IconChart } from '../../components/ui/Icons'
+import { IconDownload, IconKey, IconHanger, IconPercent, IconChart, IconSparkles } from '../../components/ui/Icons'
 import { CouponsManager } from '../../components/admin/CouponsManager'
 import { AnalyticsDashboard } from '../../components/admin/AnalyticsDashboard'
 import type { Product } from '../../types/product'
@@ -253,12 +253,21 @@ export function AdminDashboard() {
               <h1 className="font-display text-4xl">Produtos</h1>
               <p className="mt-2 text-sm text-mute">Cadastre, publique e organize o catálogo da sua loja.</p>
             </div>
-            <Link
-              to="/admin/produtos/novo"
-              className="inline-flex min-h-11 items-center bg-gold px-5 text-xs uppercase tracking-[0.2em] text-ink font-semibold hover:opacity-90 transition"
-            >
-              + Cadastrar produto
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                to="/admin/produtos/novo?aba=rapido"
+                className="inline-flex min-h-11 items-center gap-1.5 border border-gold/40 bg-gold/10 px-4 text-xs uppercase tracking-[0.18em] text-gold font-semibold hover:bg-gold hover:text-ink transition"
+              >
+                <IconSparkles className="w-3.5 h-3.5" />
+                Cadastro Rápido
+              </Link>
+              <Link
+                to="/admin/produtos/novo"
+                className="inline-flex min-h-11 items-center bg-gold px-5 text-xs uppercase tracking-[0.2em] text-ink font-semibold hover:opacity-90 transition"
+              >
+                + Cadastrar produto
+              </Link>
+            </div>
           </div>
 
       <div className="mt-8 grid gap-3 md:grid-cols-3">
