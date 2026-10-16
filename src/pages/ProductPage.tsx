@@ -5,7 +5,17 @@ import { useCart } from '../context/CartContext'
 import { effectivePriceCents, formatBRL } from '../lib/money'
 import { fetchPublishedProductBySlug, primaryImage } from '../lib/products'
 import type { Product } from '../types/product'
-import { IconCart, IconRuler, IconShield, IconTruck, IconTag, IconPercent, IconCheck } from '../components/ui/Icons'
+import {
+  IconCart,
+  IconRuler,
+  IconShield,
+  IconTruck,
+  IconTag,
+  IconPercent,
+  IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
+} from '../components/ui/Icons'
 import { SizeGuideModal } from '../components/product/SizeGuideModal'
 import { calculateCouponDiscount, fetchActiveCoupon } from '../lib/coupons'
 import {
@@ -207,18 +217,97 @@ export function ProductPage() {
     navigate('/carrinho')
   }
 
+  const currentImageIndex = Math.max(
+    0,
+    product.images.findIndex((img) => img.public_url === activeImage),
+  )
+
+  function handlePrevImage(e?: React.MouseEvent) {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    if (!product || product.images.length <= 1) return
+    const prevIndex =
+      currentImageIndex <= 0 ? product.images.length - 1 : currentImageIndex - 1
+    const nextImg = product.images[prevIndex]
+    if (nextImg) {
+      setActiveImage(nextImg.public_url)
+      if (nextImg.color) {
+        const matched = product.colors.find(
+          (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
+        )
+        if (matched) handleSelectColor(matched)
+      }
+    }
+  }
+
+  function handleNextImage(e?: React.MouseEvent) {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    if (!product || product.images.length <= 1) return
+    const nextIndex =
+      currentImageIndex >= product.images.length - 1 ? 0 : currentImageIndex + 1
+    const nextImg = product.images[nextIndex]
+    if (nextImg) {
+      setActiveImage(nextImg.public_url)
+      if (nextImg.color) {
+        const matched = product.colors.find(
+          (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
+        )
+        if (matched) handleSelectColor(matched)
+      }
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 md:py-12 pb-24 md:pb-12">
       <div className="grid gap-10 md:grid-cols-2">
         {/* Galeria de Fotos */}
         <div>
-          <div className="aspect-[3/4] overflow-hidden rounded border border-white/10 bg-ink-2">
+          <div className="relative aspect-[3/4] overflow-hidden rounded border border-white/10 bg-ink-2 select-none group">
             {main ? (
-              <img src={main} alt={product.name} className="h-full w-full object-cover transition duration-300" />
+              <img
+                src={main}
+                alt={product.name}
+                className="h-full w-full object-cover transition duration-300"
+              />
             ) : (
               <div className="flex h-full items-center justify-center font-display text-5xl tracking-[0.3em] text-gold/50">
                 SH
               </div>
+            )}
+
+            {/* Setas de Navegação entre Fotos */}
+            {product.images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePrevImage}
+                  aria-label="Foto anterior"
+                  title="Foto anterior"
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-black/65 border border-gold/50 text-gold shadow-lg backdrop-blur-md transition hover:scale-110 hover:bg-black/90 hover:border-gold active:scale-95 cursor-pointer z-10"
+                >
+                  <IconChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleNextImage}
+                  aria-label="Próxima foto"
+                  title="Próxima foto"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-black/65 border border-gold/50 text-gold shadow-lg backdrop-blur-md transition hover:scale-110 hover:bg-black/90 hover:border-gold active:scale-95 cursor-pointer z-10"
+                >
+                  <IconChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+
+                {/* Indicador de foto (ex: 2 / 4) */}
+                <div className="absolute bottom-3 right-3 rounded-full bg-black/75 border border-white/20 px-2.5 py-0.5 text-[11px] font-mono text-paper backdrop-blur-xs select-none shadow-sm pointer-events-none">
+                  {currentImageIndex + 1} / {product.images.length}
+                </div>
+              </>
             )}
           </div>
           {product.images.length > 1 && (

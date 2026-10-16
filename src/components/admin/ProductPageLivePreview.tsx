@@ -10,6 +10,8 @@ import {
   IconWhatsApp,
   IconHanger,
   IconEye,
+  IconChevronLeft,
+  IconChevronRight,
 } from '../ui/Icons'
 import { CATEGORIES } from '../../config/store'
 import {
@@ -118,6 +120,49 @@ export function ProductPageLivePreview({
     }
   }
 
+  const currentImageIndex = Math.max(
+    0,
+    images.findIndex((img) => img.url === activeUrl),
+  )
+
+  function handlePrevImage(e?: React.MouseEvent) {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    if (images.length <= 1) return
+    const prevIndex = currentImageIndex <= 0 ? images.length - 1 : currentImageIndex - 1
+    const nextImg = images[prevIndex]
+    if (nextImg) {
+      setManualImage(nextImg.url)
+      if (nextImg.color) {
+        const matched = colors.find(
+          (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
+        )
+        if (matched) handleSelectColor(matched)
+      }
+    }
+  }
+
+  function handleNextImage(e?: React.MouseEvent) {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    if (images.length <= 1) return
+    const nextIndex = currentImageIndex >= images.length - 1 ? 0 : currentImageIndex + 1
+    const nextImg = images[nextIndex]
+    if (nextImg) {
+      setManualImage(nextImg.url)
+      if (nextImg.color) {
+        const matched = colors.find(
+          (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
+        )
+        if (matched) handleSelectColor(matched)
+      }
+    }
+  }
+
   return (
     <div className="rounded border border-gold/40 bg-ink-2 shadow-xl overflow-hidden flex flex-col">
       {/* Top bar com Seletor de Dispositivo */}
@@ -181,7 +226,7 @@ export function ProductPageLivePreview({
           {/* Coluna de Imagens */}
           <div className="space-y-3">
             {/* Foto Principal */}
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-ink-2 border border-white/15 shadow-inner flex items-center justify-center">
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-ink-2 border border-white/15 shadow-inner flex items-center justify-center select-none group">
               {activeUrl ? (
                 <img
                   src={activeUrl}
@@ -196,6 +241,33 @@ export function ProductPageLivePreview({
                     Anexe fotos no formulário para visualizar aqui o resultado final com enquadramento real!
                   </p>
                 </div>
+              )}
+
+              {/* Setas de navegação na prévia */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevImage}
+                    aria-label="Foto anterior"
+                    title="Foto anterior"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 border border-gold/50 text-gold shadow-md backdrop-blur-md transition hover:scale-110 active:scale-95 cursor-pointer z-10"
+                  >
+                    <IconChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextImage}
+                    aria-label="Próxima foto"
+                    title="Próxima foto"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 border border-gold/50 text-gold shadow-md backdrop-blur-md transition hover:scale-110 active:scale-95 cursor-pointer z-10"
+                  >
+                    <IconChevronRight className="w-4 h-4" />
+                  </button>
+                  <div className="absolute top-2 right-2 rounded-full bg-black/75 border border-white/20 px-2 py-0.5 text-[9px] font-mono text-paper backdrop-blur-xs select-none pointer-events-none">
+                    {currentImageIndex + 1} / {images.length}
+                  </div>
+                </>
               )}
 
               {/* Tag de Cor vinculada se houver */}

@@ -23,7 +23,13 @@ export function Catalog() {
   const availableBrands = useMemo(() => {
     const set = new Set<string>()
     products.forEach((p) => {
-      if ((!categoria || categoria === 'promocoes' || p.category === categoria) && p.brand) set.add(p.brand)
+      const matchCat =
+        !categoria ||
+        (categoria === 'promocoes' && p.is_promo) ||
+        (categoria === 'lancamentos' && p.is_launch) ||
+        (categoria === 'destaques' && p.is_featured) ||
+        p.category === categoria
+      if (matchCat && p.brand) set.add(p.brand)
     })
     return [...set].sort()
   }, [products, categoria])
@@ -31,7 +37,13 @@ export function Catalog() {
   const availableMaterials = useMemo(() => {
     const set = new Set<string>()
     products.forEach((p) => {
-      if ((!categoria || categoria === 'promocoes' || p.category === categoria) && p.material) set.add(p.material)
+      const matchCat =
+        !categoria ||
+        (categoria === 'promocoes' && p.is_promo) ||
+        (categoria === 'lancamentos' && p.is_launch) ||
+        (categoria === 'destaques' && p.is_featured) ||
+        p.category === categoria
+      if (matchCat && p.material) set.add(p.material)
     })
     return [...set].sort()
   }, [products, categoria])
@@ -44,7 +56,13 @@ export function Catalog() {
     }
     const set = new Set<string>()
     products.forEach((p) => {
-      if ((!categoria || p.category === categoria) && p.model_type) set.add(p.model_type)
+      const matchCat =
+        !categoria ||
+        (categoria === 'promocoes' && p.is_promo) ||
+        (categoria === 'lancamentos' && p.is_launch) ||
+        (categoria === 'destaques' && p.is_featured) ||
+        p.category === categoria
+      if (matchCat && p.model_type) set.add(p.model_type)
     })
     return [...set].sort()
   }, [products, categoria])
@@ -55,7 +73,16 @@ export function Catalog() {
       if (query && !`${p.name} ${p.description} ${p.brand ?? ''} ${p.material ?? ''}`.toLowerCase().includes(query))
         return false
       if (categoria === 'promocoes' && !p.is_promo) return false
-      if (categoria && categoria !== 'promocoes' && p.category !== categoria) return false
+      if (categoria === 'lancamentos' && !p.is_launch) return false
+      if (categoria === 'destaques' && !p.is_featured) return false
+      if (
+        categoria &&
+        categoria !== 'promocoes' &&
+        categoria !== 'lancamentos' &&
+        categoria !== 'destaques' &&
+        p.category !== categoria
+      )
+        return false
       if (marca && p.brand?.toLowerCase() !== marca.toLowerCase()) return false
       if (tecido && p.material?.toLowerCase() !== tecido.toLowerCase()) return false
       if (sexo && p.gender?.toLowerCase() !== sexo.toLowerCase()) return false
@@ -84,7 +111,10 @@ export function Catalog() {
     setParams(next)
   }
 
-  const activeCategoryLabel = STORE_CATEGORIES_WITH_ICONS.find((c) => c.slug === categoria)?.label
+  const activeCategoryLabel =
+    categoria === 'destaques'
+      ? 'Destaques da Coleção'
+      : STORE_CATEGORIES_WITH_ICONS.find((c) => c.slug === categoria)?.label
 
   const hasSubfilters =
     (categoria === 'camisas' || categoria === 'calcas' || categoria === 'bermudas' || categoria === 'vestidos' || categoria === 'blazers' || categoria === 'blusas' || categoria === 'calcados' || categoria === 'acessorios' || categoria === 'promocoes')

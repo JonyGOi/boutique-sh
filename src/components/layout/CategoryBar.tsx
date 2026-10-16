@@ -15,6 +15,7 @@ import {
 
 export const STORE_CATEGORIES_WITH_ICONS = [
   { slug: '', label: 'Todas as Peças', icon: IconSparkles },
+  { slug: 'lancamentos', label: 'Lançamentos', icon: IconSparkles },
   { slug: 'vestidos', label: 'Vestidos', icon: IconDress },
   { slug: 'camisas', label: 'Camisas', icon: IconShirt },
   { slug: 'calcas', label: 'Calças', icon: IconPants },
