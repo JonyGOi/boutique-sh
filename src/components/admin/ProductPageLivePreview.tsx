@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   IconDeviceMobile,
   IconDeviceDesktop,
@@ -66,7 +66,18 @@ export function ProductPageLivePreview({
   const [selectedSize, setSelectedSize] = useState<string | null>(sizes[0] ?? null)
   const [selectedColor, setSelectedColor] = useState<string | null>(colors[0] ?? null)
   const [manualImage, setManualImage] = useState<string | null>(null)
+  const [isImgLoading, setIsImgLoading] = useState(false)
   const [qty, setQty] = useState(1)
+
+  // Pré-carrega todas as imagens no cache do navegador para transição instantânea
+  useEffect(() => {
+    if (!images || images.length <= 1) return
+    images.forEach((img) => {
+      const p = new Image()
+      p.src = img.url
+      if (p.decode) p.decode().catch(() => {})
+    })
+  }, [images])
 
   // Compute active image:
   // 1. If manual image was picked, use it
@@ -89,6 +100,12 @@ export function ProductPageLivePreview({
     activeUrl = primary?.url ?? null
   }
 
+  function changePreviewImage(url: string) {
+    if (url === activeUrl) return
+    setIsImgLoading(true)
+    setManualImage(url)
+  }
+
   // Price formatting
   const priceCents = parseBRLToCents(price) ?? 0
   const promoCents = is_promo && promo ? parseBRLToCents(promo) : null
@@ -108,7 +125,7 @@ export function ProductPageLivePreview({
       (img) => img.color && getColorName(img.color).toLowerCase() === colorName,
     )
     if (match) {
-      setManualImage(match.url)
+      changePreviewImage(match.url)
     }
 
     const allSizes = getAllProductSizes(sizes, colors)
@@ -134,7 +151,7 @@ export function ProductPageLivePreview({
     const prevIndex = currentImageIndex <= 0 ? images.length - 1 : currentImageIndex - 1
     const nextImg = images[prevIndex]
     if (nextImg) {
-      setManualImage(nextImg.url)
+      changePreviewImage(nextImg.url)
       if (nextImg.color) {
         const matched = colors.find(
           (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
@@ -153,7 +170,7 @@ export function ProductPageLivePreview({
     const nextIndex = currentImageIndex >= images.length - 1 ? 0 : currentImageIndex + 1
     const nextImg = images[nextIndex]
     if (nextImg) {
-      setManualImage(nextImg.url)
+      changePreviewImage(nextImg.url)
       if (nextImg.color) {
         const matched = colors.find(
           (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
@@ -229,9 +246,16 @@ export function ProductPageLivePreview({
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded bg-ink-2 border border-white/15 shadow-inner flex items-center justify-center select-none group">
               {activeUrl ? (
                 <img
+                  key={activeUrl}
                   src={activeUrl}
                   alt={name || 'Produto'}
-                  className="h-full w-full object-cover transition-opacity duration-200"
+                  loading="eager"
+                  decoding="async"
+                  onLoad={() => setIsImgLoading(false)}
+                  onError={() => setIsImgLoading(false)}
+                  className={`h-full w-full object-cover transition-all duration-300 ${
+                    isImgLoading ? 'opacity-35 blur-xs scale-[1.01]' : 'opacity-100 blur-0 scale-100'
+                  }`}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-6 text-center text-mute space-y-2">
@@ -240,6 +264,16 @@ export function ProductPageLivePreview({
                   <p className="text-[11px] text-mute max-w-xs">
                     Anexe fotos no formulário para visualizar aqui o resultado final com enquadramento real!
                   </p>
+                </div>
+              )}
+
+              {/* Indicador de carregamento na prévia */}
+              {isImgLoading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs z-20 pointer-events-none transition-opacity animate-fadeIn">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+                  <span className="mt-2 text-[9px] uppercase tracking-widest text-gold font-semibold">
+                    Carregando…
+                  </span>
                 </div>
               )}
 
@@ -289,7 +323,7 @@ export function ProductPageLivePreview({
                     <button
                       key={img.id || idx}
                       type="button"
-                      onClick={() => setManualImage(img.url)}
+                      onClick={() => changePreviewImage(img.url)}
                       className={`relative aspect-[3/4] overflow-hidden rounded border transition cursor-pointer ${
                         isActive
                           ? 'border-gold ring-1 ring-gold shadow-md'

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { CATEGORIES } from '../../config/store'
 import { effectivePriceCents, formatBRL } from '../../lib/money'
@@ -9,40 +9,65 @@ import type { Product } from '../../types/product'
 
 export function ProductCard({ product }: { product: Product }) {
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [isImgLoading, setIsImgLoading] = useState(false)
   const images = product.images && product.images.length > 0 ? product.images : []
   const image = images[activeImageIndex] ?? primaryImage(product)
   const price = effectivePriceCents(product)
   const category = CATEGORIES.find((c) => c.slug === product.category)?.label ?? product.category
 
+  // Pré-carrega todas as imagens do card em cache para navegação instantânea
+  useEffect(() => {
+    if (!product.images || product.images.length <= 1) return
+    product.images.forEach((img) => {
+      const p = new Image()
+      p.src = img.public_url
+      if (p.decode) p.decode().catch(() => {})
+    })
+  }, [product.id, product.images])
+
   function handlePrev(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    setIsImgLoading(true)
     setActiveImageIndex((prev) => (prev <= 0 ? images.length - 1 : prev - 1))
   }
 
   function handleNext(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
+    setIsImgLoading(true)
     setActiveImageIndex((prev) => (prev >= images.length - 1 ? 0 : prev + 1))
   }
 
   return (
     <article className="group flex flex-col rounded-sm border border-white/10 bg-ink-2 overflow-hidden transition hover:border-gold/50 hover:shadow-lg hover:shadow-black/50">
-      <Link to={`/produto/${product.slug}`} className="relative block aspect-[3/4] overflow-hidden bg-ink select-none">
+      <Link to={`/produto/${product.slug}`} className="relative block aspect-[3/4] overflow-hidden bg-ink select-none flex items-center justify-center">
         {image ? (
           <img
+            key={image.public_url}
             src={image.public_url}
             alt={product.name}
             loading="lazy"
             decoding="async"
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+            onLoad={() => setIsImgLoading(false)}
+            className={`h-full w-full object-cover transition-all duration-300 group-hover:scale-[1.04] ${
+              isImgLoading ? 'opacity-35 blur-xs' : 'opacity-100 blur-0'
+            }`}
             onError={(e) => {
+              setIsImgLoading(false)
               e.currentTarget.src = 'https://placehold.co/600x800/151515/c9a24a?text=SH+Boutique'
             }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-ink">
             <span className="font-display text-3xl tracking-[0.3em] text-gold/70">SH</span>
+          </div>
+        )}
+
+        {/* Indicador de carregamento no card */}
+        {isImgLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-xs z-10 pointer-events-none transition-opacity">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
           </div>
         )}
 

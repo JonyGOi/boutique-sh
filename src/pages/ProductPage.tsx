@@ -39,7 +39,24 @@ export function ProductPage() {
   const [qty, setQty] = useState(1)
   const [message, setMessage] = useState<string | null>(null)
   const [activeImage, setActiveImage] = useState<string | null>(null)
+  const [imageLoading, setImageLoading] = useState(false)
   const [showSizeModal, setShowSizeModal] = useState(false)
+
+  // Pré-carrega todas as fotos do produto no cache do navegador para troca instantânea
+  useEffect(() => {
+    if (!product?.images || product.images.length === 0) return
+    product.images.forEach((img) => {
+      const p = new Image()
+      p.src = img.public_url
+      if (p.decode) p.decode().catch(() => {})
+    })
+  }, [product?.images])
+
+  function changeActiveImage(newUrl: string) {
+    if (newUrl === activeImage) return
+    setImageLoading(true)
+    setActiveImage(newUrl)
+  }
 
   // Cupom de Desconto na página do produto
   const [couponInput, setCouponInput] = useState('')
@@ -181,7 +198,7 @@ export function ProductPage() {
       (img) => img.color && getColorName(img.color).toLowerCase() === colorName.toLowerCase(),
     )
     if (matchedImg) {
-      setActiveImage(matchedImg.public_url)
+      changeActiveImage(matchedImg.public_url)
     }
 
     // Atualiza os tamanhos dinamicamente conforme a cor selecionada
@@ -232,7 +249,7 @@ export function ProductPage() {
       currentImageIndex <= 0 ? product.images.length - 1 : currentImageIndex - 1
     const nextImg = product.images[prevIndex]
     if (nextImg) {
-      setActiveImage(nextImg.public_url)
+      changeActiveImage(nextImg.public_url)
       if (nextImg.color) {
         const matched = product.colors.find(
           (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
@@ -252,7 +269,7 @@ export function ProductPage() {
       currentImageIndex >= product.images.length - 1 ? 0 : currentImageIndex + 1
     const nextImg = product.images[nextIndex]
     if (nextImg) {
-      setActiveImage(nextImg.public_url)
+      changeActiveImage(nextImg.public_url)
       if (nextImg.color) {
         const matched = product.colors.find(
           (c) => getColorName(c).toLowerCase() === getColorName(nextImg.color!).toLowerCase(),
@@ -267,16 +284,36 @@ export function ProductPage() {
       <div className="grid gap-10 md:grid-cols-2">
         {/* Galeria de Fotos */}
         <div>
-          <div className="relative aspect-[3/4] overflow-hidden rounded border border-white/10 bg-ink-2 select-none group">
+          <div className="relative aspect-[3/4] overflow-hidden rounded border border-white/10 bg-ink-2 select-none group flex items-center justify-center">
             {main ? (
               <img
+                key={main}
                 src={main}
                 alt={product.name}
-                className="h-full w-full object-cover transition duration-300"
+                loading="eager"
+                decoding="async"
+                onLoad={() => setImageLoading(false)}
+                onError={() => setImageLoading(false)}
+                className={`h-full w-full object-cover transition-all duration-300 ${
+                  imageLoading ? 'opacity-35 blur-xs scale-[1.01]' : 'opacity-100 blur-0 scale-100'
+                }`}
               />
             ) : (
               <div className="flex h-full items-center justify-center font-display text-5xl tracking-[0.3em] text-gold/50">
                 SH
+              </div>
+            )}
+
+            {/* Indicador de Carregamento da Foto */}
+            {imageLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-xs z-20 pointer-events-none transition-opacity animate-fadeIn">
+                <div className="relative flex items-center justify-center">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-gold/30 border-t-gold" />
+                  <span className="absolute font-display text-xs text-gold font-bold">SH</span>
+                </div>
+                <span className="mt-2.5 text-[10px] uppercase tracking-[0.25em] text-gold font-semibold drop-shadow">
+                  Carregando foto…
+                </span>
               </div>
             )}
 
@@ -317,7 +354,7 @@ export function ProductPage() {
                   key={img.id}
                   type="button"
                   onClick={() => {
-                    setActiveImage(img.public_url)
+                    changeActiveImage(img.public_url)
                     if (img.color) {
                       const matched = product.colors.find(
                         (c) => getColorName(c).toLowerCase() === getColorName(img.color!).toLowerCase(),
