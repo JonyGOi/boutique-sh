@@ -1,5 +1,6 @@
 import type { CartItem, Product, ValidatedLine } from '../types/product'
 import { effectivePriceCents, subtotalCents } from './money'
+import { getColorName, getColorSizes } from './colors'
 
 export const CART_STORAGE_KEY = 'sh-boutique-cart-v1'
 
@@ -66,15 +67,43 @@ export function validateCartAgainstCatalog(
       errors.push('Um produto do carrinho não está mais disponível.')
       continue
     }
-    if (product.sizes.length > 0) {
-      if (!item.size || !product.sizes.includes(item.size)) {
-        errors.push(`Selecione um tamanho válido para ${product.name}.`)
+    // Validação da cor selecionada (compatível com nomes puros ou formato Nome|#hex|tamanhos)
+    let matchedColorEntry: string | null = null
+    if (product.colors.length > 0) {
+      if (!item.color) {
+        errors.push(`Selecione uma cor válida para ${product.name}.`)
+        continue
+      }
+      const itemColorClean = item.color.trim().toLowerCase()
+      matchedColorEntry =
+        product.colors.find(
+          (c) =>
+            getColorName(c).trim().toLowerCase() === itemColorClean ||
+            c.trim().toLowerCase() === itemColorClean,
+        ) ?? null
+
+      if (!matchedColorEntry) {
+        errors.push(`Selecione uma cor válida para ${product.name}.`)
         continue
       }
     }
-    if (product.colors.length > 0) {
-      if (!item.color || !product.colors.includes(item.color)) {
-        errors.push(`Selecione uma cor válida para ${product.name}.`)
+
+    // Validação do tamanho selecionado (considerando tamanhos específicos da cor ou gerais da peça)
+    const colorSpecificSizes = matchedColorEntry ? getColorSizes(matchedColorEntry) : null
+    const validSizes =
+      colorSpecificSizes && colorSpecificSizes.length > 0
+        ? colorSpecificSizes
+        : product.sizes.length > 0
+        ? product.sizes
+        : []
+
+    if (validSizes.length > 0) {
+      const itemSizeClean = item.size?.trim().toUpperCase()
+      const sizeMatch = itemSizeClean
+        ? validSizes.some((s) => s.trim().toUpperCase() === itemSizeClean)
+        : false
+      if (!sizeMatch) {
+        errors.push(`Selecione um tamanho válido para ${product.name}.`)
         continue
       }
     }

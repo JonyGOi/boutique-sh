@@ -12,7 +12,14 @@ import {
   IconEye,
 } from '../ui/Icons'
 import { CATEGORIES } from '../../config/store'
-import { getColorHex, getColorName, getColorSizes, isColorLight } from '../../lib/colors'
+import {
+  getColorHex,
+  getColorName,
+  getColorSizes,
+  isColorLight,
+  getAllProductSizes,
+  getAvailableSizesForColor,
+} from '../../lib/colors'
 import { formatBRL, parseBRLToCents } from '../../lib/money'
 
 export interface PreviewImage {
@@ -88,8 +95,9 @@ export function ProductPageLivePreview({
   const categoryObj = CATEGORIES.find((c) => c.slug === category)
   const categoryLabel = categoryObj?.label ?? category
 
-  const colorSizes = selectedColor ? getColorSizes(selectedColor) : null
-  const activeSizes = colorSizes && colorSizes.length > 0 ? colorSizes : sizes
+  const allProductSizes = getAllProductSizes(sizes, colors)
+  const availableForColor = getAvailableSizesForColor(selectedColor, allProductSizes, sizes)
+  const hasUnavailableSizes = allProductSizes.some((s) => !availableForColor.includes(s))
 
   function handleSelectColor(colorEntry: string) {
     setSelectedColor(colorEntry)
@@ -101,8 +109,8 @@ export function ProductPageLivePreview({
       setManualImage(match.url)
     }
 
-    const nextColorSizes = getColorSizes(colorEntry)
-    const nextAvailable = nextColorSizes && nextColorSizes.length > 0 ? nextColorSizes : sizes
+    const allSizes = getAllProductSizes(sizes, colors)
+    const nextAvailable = getAvailableSizesForColor(colorEntry, allSizes, sizes)
     if (selectedSize && !nextAvailable.includes(selectedSize)) {
       setSelectedSize(nextAvailable[0] ?? null)
     } else if (!selectedSize && nextAvailable.length > 0) {
@@ -318,46 +326,7 @@ export function ProductPageLivePreview({
               </div>
             )}
 
-            {/* Seletor de Tamanhos */}
-            {activeSizes.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] uppercase tracking-[0.2em] text-paper font-semibold">
-                    Tamanho{' '}
-                    {colorSizes && colorSizes.length > 0 && (
-                      <span className="text-gold font-normal lowercase text-[10px]">
-                        (para a cor {getColorName(selectedColor!)})
-                      </span>
-                    )}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[11px] text-gold">
-                    <IconRuler className="w-3 h-3" />
-                    Tabela de Medidas
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {activeSizes.map((s) => {
-                    const isSelected = (selectedSize || activeSizes[0]) === s
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setSelectedSize(s)}
-                        className={`min-h-10 min-w-10 rounded border px-3 text-xs font-semibold uppercase tracking-wider transition cursor-pointer ${
-                          isSelected
-                            ? 'border-gold bg-gold text-ink shadow-sm'
-                            : 'border-white/20 text-paper hover:border-gold/50'
-                        }`}
-                      >
-                        {s}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Seletor de Cores */}
+            {/* 1. Seletor de Cores (PRIMEIRO) */}
             {colors.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -421,6 +390,72 @@ export function ProductPageLivePreview({
                     )
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* 2. Seletor de Tamanhos (EMBAIXO DA COR) */}
+            {allProductSizes.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] uppercase tracking-[0.2em] text-paper font-semibold">
+                    Tamanho:{' '}
+                    <span className="text-gold font-bold ml-1">{selectedSize || 'Selecione'}</span>
+                    {selectedColor && (
+                      <span className="text-mute font-normal lowercase text-[10px] ml-1">
+                        (para a cor {getColorName(selectedColor)})
+                      </span>
+                    )}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[11px] text-gold">
+                    <IconRuler className="w-3 h-3" />
+                    Tabela de Medidas
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {allProductSizes.map((s) => {
+                    const isAvailable = availableForColor.includes(s)
+                    const isSelected = selectedSize === s
+
+                    if (!isAvailable) {
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          disabled
+                          title={`Tamanho ${s} indisponível na cor ${
+                            selectedColor ? getColorName(selectedColor) : 'selecionada'
+                          }`}
+                          className="min-h-10 min-w-10 rounded border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold uppercase tracking-wider text-mute/40 line-through cursor-not-allowed select-none opacity-35"
+                        >
+                          {s}
+                        </button>
+                      )
+                    }
+
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setSelectedSize(s)}
+                        className={`min-h-10 min-w-10 rounded border px-3 text-xs font-semibold uppercase tracking-wider transition cursor-pointer ${
+                          isSelected
+                            ? 'border-gold bg-gold text-ink shadow-sm font-bold'
+                            : 'border-white/20 text-paper hover:border-gold/50 bg-ink-2'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    )
+                  })}
+                </div>
+                {hasUnavailableSizes && (
+                  <p className="text-[10px] text-mute flex items-center gap-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-white/10 border border-white/20 line-through text-center text-[8px] leading-[9px]">
+                      /
+                    </span>
+                    Tamanhos em cinza e riscados não estão disponíveis nesta cor.
+                  </p>
+                )}
               </div>
             )}
 

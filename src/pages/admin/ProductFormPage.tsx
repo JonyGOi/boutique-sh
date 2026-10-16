@@ -27,6 +27,7 @@ import {
   getColorName,
   getColorSizes,
   isColorLight,
+  getAllProductSizes,
 } from '../../lib/colors'
 import type { Product, ProductImageRow } from '../../types/product'
 
@@ -212,6 +213,7 @@ export function ProductFormPage() {
     if (!PRODUCT_CATEGORIES.some((c) => c.slug === form.category)) return 'Categoria inválida.'
     return {
       ...form,
+      sizes: getAllProductSizes(form.sizes, form.colors),
       name: form.name.trim(),
       description: form.description.trim(),
       price_cents: priceCents,

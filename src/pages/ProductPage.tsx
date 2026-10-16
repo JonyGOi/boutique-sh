@@ -8,7 +8,14 @@ import type { Product } from '../types/product'
 import { IconCart, IconRuler, IconShield, IconTruck, IconTag, IconPercent, IconCheck } from '../components/ui/Icons'
 import { SizeGuideModal } from '../components/product/SizeGuideModal'
 import { calculateCouponDiscount, fetchActiveCoupon } from '../lib/coupons'
-import { getColorHex, getColorName, getColorSizes, isColorLight } from '../lib/colors'
+import {
+  getColorHex,
+  getColorName,
+  getColorSizes,
+  isColorLight,
+  getAllProductSizes,
+  getAvailableSizesForColor,
+} from '../lib/colors'
 
 export function ProductPage() {
   const { slug = '' } = useParams()
@@ -51,9 +58,9 @@ export function ProductPage() {
           setProduct(data)
           const firstColor = data.colors[0] ?? null
           setColor(firstColor)
-          const colorSizes = firstColor ? getColorSizes(firstColor) : null
-          const initialSizes = colorSizes && colorSizes.length > 0 ? colorSizes : data.sizes
-          setSize(initialSizes[0] ?? null)
+          const allSizes = getAllProductSizes(data.sizes, data.colors)
+          const available = getAvailableSizesForColor(firstColor, allSizes, data.sizes)
+          setSize(available[0] ?? null)
           if (firstColor) {
             const firstColorName = getColorName(firstColor)
             const matchedImg = data.images.find(
@@ -91,8 +98,11 @@ export function ProductPage() {
   const categoryLabel = categoryObj?.label ?? product.category
   const main = activeImage
 
-  const colorSizes = color ? getColorSizes(color) : null
-  const availableSizes = colorSizes && colorSizes.length > 0 ? colorSizes : product.sizes
+  const allProductSizes = product ? getAllProductSizes(product.sizes, product.colors) : []
+  const availableSizesForColor = product
+    ? getAvailableSizesForColor(color, allProductSizes, product.sizes)
+    : []
+  const hasUnavailableSizes = allProductSizes.some((s) => !availableSizesForColor.includes(s))
 
   async function handleApplyCoupon(e?: React.FormEvent) {
     if (e) e.preventDefault()
@@ -125,15 +135,22 @@ export function ProductPage() {
 
   function validateSelection(): boolean {
     setMessage(null)
-    const selColorSizes = color ? getColorSizes(color) : null
-    const currentAvailable = selColorSizes && selColorSizes.length > 0 ? selColorSizes : (product?.sizes ?? [])
-    if (currentAvailable.length > 0 && !size) {
-      setMessage('Por favor, selecione um tamanho antes de continuar.')
-      return false
-    }
     if (product!.colors.length > 0 && !color) {
       setMessage('Por favor, selecione uma cor antes de continuar.')
       return false
+    }
+    const currentAvailable = getAvailableSizesForColor(color, allProductSizes, product?.sizes)
+    if (currentAvailable.length > 0) {
+      if (!size) {
+        setMessage('Por favor, selecione um tamanho antes de continuar.')
+        return false
+      }
+      if (!currentAvailable.includes(size)) {
+        setMessage(
+          `O tamanho ${size} não está disponível na cor selecionada. Por favor, escolha um dos tamanhos disponíveis.`,
+        )
+        return false
+      }
     }
     if (!Number.isInteger(qty) || qty < 1) {
       setMessage('Informe uma quantidade válida.')
@@ -158,12 +175,12 @@ export function ProductPage() {
     }
 
     // Atualiza os tamanhos dinamicamente conforme a cor selecionada
-    const nextColorSizes = getColorSizes(colorOption)
-    const available = nextColorSizes && nextColorSizes.length > 0 ? nextColorSizes : (product?.sizes ?? [])
-    if (size && !available.includes(size)) {
-      setSize(available[0] ?? null)
-    } else if (!size && available.length > 0) {
-      setSize(available[0] ?? null)
+    const allSizes = getAllProductSizes(product?.sizes, product?.colors)
+    const nextAvailable = getAvailableSizesForColor(colorOption, allSizes, product?.sizes)
+    if (size && !nextAvailable.includes(size)) {
+      setSize(nextAvailable[0] ?? null)
+    } else if (!size && nextAvailable.length > 0) {
+      setSize(nextAvailable[0] ?? null)
     }
   }
 
@@ -171,8 +188,8 @@ export function ProductPage() {
     if (!validateSelection()) return
     addItem({
       productId: product!.id,
-      size: product!.sizes.length ? size : null,
-      color: product!.colors.length ? (color ? getColorName(color) : null) : null,
+      size: allProductSizes.length > 0 ? size : null,
+      color: product!.colors.length > 0 ? (color ? getColorName(color) : null) : null,
       quantity: qty,
     })
     setMessage('Peça adicionada à sacola!')
@@ -183,8 +200,8 @@ export function ProductPage() {
     if (!validateSelection()) return
     addItem({
       productId: product!.id,
-      size: product!.sizes.length ? size : null,
-      color: product!.colors.length ? (color ? getColorName(color) : null) : null,
+      size: allProductSizes.length > 0 ? size : null,
+      color: product!.colors.length > 0 ? (color ? getColorName(color) : null) : null,
       quantity: qty,
     })
     navigate('/carrinho')
@@ -308,49 +325,9 @@ export function ProductPage() {
             </div>
           )}
 
-          {/* Seletor de Tamanhos com Botão da Tabela de Medidas */}
-          {availableSizes.length > 0 && (
-            <fieldset className="mt-7">
-              <div className="flex items-center justify-between">
-                <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">
-                  Tamanho{' '}
-                  {colorSizes && colorSizes.length > 0 && (
-                    <span className="text-gold font-normal lowercase text-[11px]">
-                      (para a cor {getColorName(color!)})
-                    </span>
-                  )}
-                </legend>
-                <button
-                  type="button"
-                  onClick={() => setShowSizeModal(true)}
-                  className="inline-flex items-center gap-1.5 text-xs text-gold hover:underline transition cursor-pointer"
-                >
-                  <IconRuler className="w-3.5 h-3.5" />
-                  <span>Tabela de Medidas</span>
-                </button>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {availableSizes.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setSize(option)}
-                    className={`min-h-11 min-w-11 rounded border px-4 text-xs font-semibold uppercase tracking-wider transition ${
-                      size === option
-                        ? 'border-gold bg-gold text-ink shadow-md shadow-gold/20'
-                        : 'border-white/20 text-paper hover:border-gold/50'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          )}
-
-          {/* Seletor de Cores com Círculos Selecionáveis */}
+          {/* 1. Seletor de Cores com Círculos Selecionáveis (PRIMEIRO) */}
           {product.colors.length > 0 && (
-            <fieldset className="mt-6">
+            <fieldset className="mt-7">
               <div className="flex items-center justify-between">
                 <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">
                   Cor:{' '}
@@ -426,6 +403,78 @@ export function ProductPage() {
                   )
                 })}
               </div>
+            </fieldset>
+          )}
+
+          {/* 2. Seletor de Tamanhos (EMBAIXO DA COR) */}
+          {allProductSizes.length > 0 && (
+            <fieldset className="mt-6">
+              <div className="flex items-center justify-between">
+                <legend className="text-xs uppercase tracking-[0.2em] text-paper font-semibold">
+                  Tamanho:{' '}
+                  <span className="text-gold font-bold ml-1">{size || 'Selecione'}</span>
+                  {color && (
+                    <span className="text-mute font-normal lowercase text-[11px] ml-1.5">
+                      (para a cor {getColorName(color)})
+                    </span>
+                  )}
+                </legend>
+                <button
+                  type="button"
+                  onClick={() => setShowSizeModal(true)}
+                  className="inline-flex items-center gap-1.5 text-xs text-gold hover:underline transition cursor-pointer"
+                >
+                  <IconRuler className="w-3.5 h-3.5" />
+                  <span>Tabela de Medidas</span>
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {allProductSizes.map((option) => {
+                  const isAvailable = availableSizesForColor.includes(option)
+                  const isSelected = size === option
+
+                  if (!isAvailable) {
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        disabled
+                        title={`Tamanho ${option} indisponível na cor ${
+                          color ? getColorName(color) : 'selecionada'
+                        }`}
+                        className="min-h-11 min-w-11 rounded border border-white/10 bg-white/[0.04] px-4 text-xs font-semibold uppercase tracking-wider text-mute/40 line-through cursor-not-allowed select-none transition opacity-40"
+                      >
+                        {option}
+                      </button>
+                    )
+                  }
+
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSize(option)}
+                      className={`min-h-11 min-w-11 rounded border px-4 text-xs font-semibold uppercase tracking-wider transition cursor-pointer ${
+                        isSelected
+                          ? 'border-gold bg-gold text-ink font-bold shadow-md shadow-gold/20'
+                          : 'border-white/20 text-paper hover:border-gold/50 bg-ink-2'
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {hasUnavailableSizes && (
+                <p className="mt-2 text-[11px] text-mute flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-full bg-white/10 border border-white/20 line-through text-center text-[9px] leading-3 text-mute/70">
+                    /
+                  </span>
+                  Tamanhos em cinza e riscados não estão disponíveis na cor selecionada.
+                </p>
+              )}
             </fieldset>
           )}
 

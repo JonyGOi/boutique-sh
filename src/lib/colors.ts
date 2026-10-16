@@ -191,6 +191,100 @@ export function getColorSizes(raw: string): string[] | null {
 }
 
 /**
+ * Retorna todos os tamanhos distintos existentes em um produto,
+ * combinando os tamanhos gerais e os tamanhos específicos de cada cor,
+ * ordenados harmoniosamente pelos padrões da moda.
+ */
+export function getAllProductSizes(
+  generalSizes?: string[] | null,
+  colors?: string[] | null,
+): string[] {
+  const set = new Set<string>()
+
+  if (generalSizes) {
+    for (const s of generalSizes) {
+      if (s && s.trim()) set.add(s.trim().toUpperCase())
+    }
+  }
+
+  if (colors) {
+    for (const c of colors) {
+      const cSizes = getColorSizes(c)
+      if (cSizes) {
+        for (const s of cSizes) {
+          if (s && s.trim()) set.add(s.trim().toUpperCase())
+        }
+      }
+    }
+  }
+
+  const all = Array.from(set)
+
+  const standardOrder = [
+    'PP',
+    'P',
+    'M',
+    'MM',
+    'G',
+    'GG',
+    'XG',
+    'XXG',
+    'G1',
+    'G2',
+    'G3',
+    'G4',
+    '32',
+    '33',
+    '34',
+    '35',
+    '36',
+    '37',
+    '38',
+    '39',
+    '40',
+    '42',
+    '44',
+    '46',
+    '48',
+    '50',
+    '52',
+    '54',
+    'ÚNICO',
+    'UNICO',
+    'U',
+  ]
+
+  return all.sort((a, b) => {
+    const idxA = standardOrder.indexOf(a)
+    const idxB = standardOrder.indexOf(b)
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB
+    if (idxA !== -1) return -1
+    if (idxB !== -1) return 1
+    return a.localeCompare(b, undefined, { numeric: true })
+  })
+}
+
+/**
+ * Retorna a lista de tamanhos disponíveis para a cor atualmente selecionada.
+ * Se a cor tem tamanhos específicos, retorna esses tamanhos.
+ * Se a cor não tem tamanhos específicos (ou nenhuma cor selecionada), retorna os tamanhos gerais (ou todos os tamanhos da peça).
+ */
+export function getAvailableSizesForColor(
+  colorRaw: string | null | undefined,
+  allProductSizes: string[],
+  generalSizes?: string[] | null,
+): string[] {
+  if (!colorRaw) {
+    return generalSizes && generalSizes.length > 0 ? generalSizes : allProductSizes
+  }
+  const colorSizes = getColorSizes(colorRaw)
+  if (colorSizes && colorSizes.length > 0) {
+    return colorSizes
+  }
+  return generalSizes && generalSizes.length > 0 ? generalSizes : allProductSizes
+}
+
+/**
  * Formata um par nome/hex/tamanhos para armazenamento (ex: "Preto", "Azul Petróleo|#0e7490" ou "Preto|#18181b|M,MM,G,GG").
  */
 export function formatColorEntry(
